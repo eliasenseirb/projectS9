@@ -1,14 +1,22 @@
 #!/usr/bin/env python3
 
-import sys
-sys.path.insert(0, '../../build/lib')
-
 import numpy as np
-import py_aff3ct as aff3ct
-import math
+import sys
+import os
+from dotenv import load_dotenv
 import time
+import math
 import matplotlib.pyplot as plt
-from datetime import timedelta
+
+load_dotenv()
+# ensure we can find aff3ct
+sys.path.append(os.getenv("AFF3CT_PATH"))
+sys.path.append("../"+os.getenv("AFF3CT_PATH"))
+
+
+import py_aff3ct as aff3ct
+import py_aff3ct.module.encoder as af_enc
+
 
 K = 512
 N = 1024
@@ -81,6 +89,7 @@ mdm2["demodulate   ::CP  "].bind(                 sigma2  ) #nv valeur de sigma 
 #mnt("check_errors").stats = True
 
 seq  = aff3ct.tools.sequence.Sequence(src("generate"), mnt("check_errors"), 4)
+seq2  = aff3ct.tools.sequence.Sequence(src("generate"), mnt2("check_errors"), 4)
 
 fer = np.zeros(len(ebn0))
 ber = np.zeros(len(ebn0))
@@ -112,6 +121,7 @@ for i in range(len(sigma_vals)):
 
 	t = time.time()
 	seq.exec()
+	seq2.exec()
 	elapsed = time.time() - t
 	total_fra = mnt.get_n_analyzed_fra()
 
@@ -130,6 +140,8 @@ for i in range(len(sigma_vals)):
 
 	line1.set_ydata(fer)
 	line2.set_ydata(ber)
+	line3.set_ydata(fer2)
+	line4.set_ydata(ber2)
 	fig.canvas.draw()
 	fig.canvas.flush_events()
 	plt.pause(1e-6)
