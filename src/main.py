@@ -59,7 +59,7 @@ def display_frozen_bits(frozen_bits):
 K = 512
 N = 1024
 ebn0_min = 0
-ebn0_max = 10
+ebn0_max = 80
 ebn0_step = 0.25
 
 ebn0 = np.arange(ebn0_min,ebn0_max,ebn0_step)
@@ -97,8 +97,12 @@ mnt2 = aff3ct.module.monitor.Monitor_BFER_AR(K,1000)
 # Link sockets together
 sigma         = np.ndarray(shape = (1,1),  dtype = np.float32)
 sigma_wiretap = np.ndarray(shape = (1,1),  dtype = np.float32)
+
+
 enc["encode        ::U_K "].bind(src["generate    ::U_K "])
 mdm["modulate      ::X_N1"].bind(enc["encode      ::X_N "])
+
+
 chn["add_noise     ::X_N "].bind(mdm["modulate    ::X_N2"])
 chn2["add_noise    ::X_N "].bind(mdm["modulate    ::X_N2"])
 mdm["demodulate    ::Y_N1"].bind(chn["add_noise   ::Y_N "])
@@ -117,6 +121,7 @@ mdm2["demodulate   ::CP  "].bind(          sigma_wiretap  )
 
 seq  = aff3ct.tools.sequence.Sequence(src("generate"), mnt("check_errors"), 4)
 
+
 fer   = np.zeros(len(ebn0))
 ber   = np.zeros(len(ebn0))
 fer_w = np.zeros(len(ebn0))
@@ -124,7 +129,17 @@ ber_w = np.zeros(len(ebn0))
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
+
 line1,line2,line3,line4, = ax.semilogy(ebn0, fer, 'r-', ebn0, ber, 'b--', ebn0, fer_w, 'g-', ebn0, ber_w, 'm--') # Returns a tuple of line objects, thus the comma
+
+ax.set_title("Test wiretap")
+line1.set_label("fer")
+line2.set_label("ber")
+line3.set_label("fer wiretap")
+line4.set_label("ber wiretap")
+ax.legend()
+ax.set_xlabel("SNR (dB)")
+ax.set_ylabel("Pe")
 plt.ylim((1e-6, 1))
 
 print("Eb/NO | FRA | BER | FER | Tpt ")
@@ -143,7 +158,12 @@ for i in range(len(sigma_vals)):
 	dec2.set_frozen_bits(frozen_bits)
 
 	t = time.time()
+
+
 	seq.exec()
+
+
+	
 	elapsed = time.time() - t
 	total_fra = mnt.get_n_analyzed_fra()
 
@@ -161,6 +181,7 @@ for i in range(len(sigma_vals)):
 	line2.set_ydata(ber)
 	line3.set_ydata(fer_w)
 	line4.set_ydata(ber_w)
+	
 	fig.canvas.draw()
 	fig.canvas.flush_events()
 	plt.pause(1e-6)
