@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 import sys
 import os
-
+from pad import Pad
 import numpy as np
 
 load_dotenv()
@@ -12,11 +12,12 @@ sys.path.append("../"+os.getenv("AFF3CT_PATH"))
 import py_aff3ct as aff3ct
 import py_aff3ct.module.encoder as af_enc
 
-class Padder:
+class Padder(aff3ct.module.Module):
 
     def __init__(self, init_size: int, final_size: int):
         self.init_size = init_size
         self.final_size = final_size
+        self._tasks = Pad()
 
     def pad(self, sig: np.ndarray):
         """Pad the received signal so that it has final_size components"""
@@ -41,3 +42,7 @@ class Padder:
         #breakpoint()
         test = padded_sig[0:self.init_size]
         return test
+
+    @property
+    def tasks(self):
+        return self._tasks
