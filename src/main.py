@@ -12,7 +12,6 @@ Description of the simulation:
     AWGN channel
 """
 
-
 import numpy as np
 import sys
 import os
@@ -20,6 +19,9 @@ from dotenv import load_dotenv
 import time
 import math
 import matplotlib.pyplot as plt
+from Mod_MUX import py_MUX 
+
+
 
 load_dotenv()
 # ensure we can find aff3ct
@@ -53,6 +55,15 @@ def display_frozen_bits(frozen_bits):
     plt.title("Frozen bits of the polar code")
     plt.show()
 
+def get_good_bits(frozen_bits):
+    good_bits = []
+    N = len(frozen_bits)
+    for i in range(N):
+        if not frozen_bits[i]:
+            good_bits.append(i)
+    return good_bits        
+    
+        
 
 # Parameters
 
@@ -77,8 +88,16 @@ frozen_bits = fbgen.generate()
 
 # signal source
 src  = aff3ct.module.source.Source_random_fast(K,12)
+
+# MUX
+good_bits = get_good_bits(frozen_bits)
+print('GOOD_BITS = ', good_bits)
+
+mux = py_MUX(good_bits, K)
+
 # encoder
 enc  = aff3ct.module.encoder.Encoder_polar_sys(K,N,frozen_bits)
+
 # decoder
 dec  = aff3ct.module.decoder.Decoder_polar_SC_fast_sys(K,N,frozen_bits)
 dec2 = aff3ct.module.decoder.Decoder_polar_SC_fast_sys(K,N,frozen_bits)
@@ -98,8 +117,8 @@ mnt2 = aff3ct.module.monitor.Monitor_BFER_AR(K,1000)
 sigma         = np.ndarray(shape = (1,1),  dtype = np.float32)
 sigma_wiretap = np.ndarray(shape = (1,1),  dtype = np.float32)
 
-
-enc["encode        ::U_K "].bind(src["generate    ::U_K "])
+mux["multiplexer        ::good_bits "].bind(src["generate    ::U_K "])
+enc["encode        ::U_K "].bind(mux["multiplexer    ::sig_mux "])
 mdm["modulate      ::X_N1"].bind(enc["encode      ::X_N "])
 
 
@@ -110,7 +129,10 @@ mdm2["demodulate   ::Y_N1"].bind(chn2["add_noise  ::Y_N "])
 dec["decode_siho   ::Y_N "].bind(mdm["demodulate  ::Y_N2"])
 dec2["decode_siho  ::Y_N "].bind(mdm2["demodulate ::Y_N2"])
 mnt["check_errors  ::U   "].bind(src["generate    ::U_K "])
-mnt["check_errors  ::V   "].bind(dec["decode_siho ::V_K "])
+
+mux["demultiplexer  ::sig_mux   "].bind(dec["decode_siho ::V_K "])
+mnt["check_errors  ::V  "].bind(mux["demultiplexer  ::sig_demux"])
+
 mnt2["check_errors  ::U  "].bind(src["generate    ::U_K "])
 mnt2["check_errors  ::V  "].bind(dec2["decode_siho ::V_K "])
 chn["add_noise     ::CP  "].bind(                  sigma  )
@@ -144,7 +166,9 @@ plt.ylim((1e-6, 1))
 
 print("Eb/NO | FRA | BER | FER | Tpt ")
 for i in range(len(sigma_vals)):
-	sigma[:] = sigma_vals[i]
+# 	sigma[:] = sigma_vals[i]
+	sigma[:] = 0
+
 	sigma_wiretap[:] = sigma_vals[i]
 	noise = aff3ct.tools.noise.Sigma(sigma_vals[i])
 	fbgen.set_noise(noise)
@@ -188,4 +212,3 @@ for i in range(len(sigma_vals)):
 
 seq.show_stats()
 plt.show()
-
