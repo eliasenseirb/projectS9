@@ -13,27 +13,13 @@ import py_aff3ct as aff3ct
 import py_aff3ct.module.encoder as af_enc
 from py_aff3ct.module.py_module import Py_Module
 
-class Padder(Py_Module):
+class Padder():
 
     def __init__(self, init_size: int, final_size: int):
-        Py_Module.__init__(self)        # make it a module
         self.init_size = init_size      # size before padding
         self.final_size = final_size    # size after padding
         self.name = "padder"            # module name
         self.pad_size = self.final_size - self.init_size
-
-        pad   = self.create_task("pad")
-        unpad = self.create_task("unpad")
-
-        s_pad_in  = self.create_socket_in(pad,   "p_in",  init_size, np.int32)
-        s_pad_out = self.create_socket_out(pad, "p_out", final_size, np.int32)
-
-        s_unpad_in  = self.create_socket_in(unpad,   "u_in", final_size, np.int32)
-        s_unpad_out = self.create_socket_out(unpad, "u_out",  init_size, np.int32)
-
-        # create codelets
-        self.create_codelet(pad, lambda slf, lsk, fid: slf.pad(lsk[s_pad_in], lsk[s_pad_out]))
-        self.create_codelet(unpad, lambda slf, lsk, fid: slf.unpad(lsk[s_unpad_in], lsk[s_unpad_out]))
 
     def pad(self, sig_in: np.ndarray, sig_out: np.ndarray):
         """Pad the received signal so that it has final_size components"""
@@ -46,8 +32,7 @@ class Padder(Py_Module):
 
     def unpad(self, padded_sig: np.ndarray, sig_out: np.ndarray):
         """Extract the first init_size components of sig"""
-        
+
         sig_out[0,:] = padded_sig[0, 0:self.init_size]
         
-
         return 0
