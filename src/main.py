@@ -189,3 +189,4 @@ for i in range(len(sigma_vals)):
 seq.show_stats()
 plt.show()
 
+
