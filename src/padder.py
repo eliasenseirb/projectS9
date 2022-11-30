@@ -24,30 +24,34 @@ class Padder(Py_Module):
 
         pad   = self.create_task("pad")
         unpad = self.create_task("unpad")
+        unpad_test = self.create_task("unpad_test")
 
-        s_pad_in  = self.create_socket_in(pad,   "p_in",  init_size, np.int32)
-        s_pad_out = self.create_socket_out(pad, "p_out", final_size, np.int32)
+        s_pad_in  = self.create_socket_in(pad,   "p_in",  init_size, np.float32)
+        s_pad_out = self.create_socket_out(pad, "p_out", final_size, np.float32)
 
-        s_unpad_in  = self.create_socket_in(unpad,   "u_in", final_size, np.int32)
-        s_unpad_out = self.create_socket_out(unpad, "u_out",  init_size, np.int32)
+        # cas reel (canal)
+        s_unpad_in  = self.create_socket_in(unpad,   "u_in", final_size, np.float32)
+        s_unpad_out = self.create_socket_out(unpad, "u_out",  init_size, np.float32)
+
+        # tests (sans canal)
+        s_test_unpad_in  = self.create_socket_in(unpad_test,   "u_in_t", final_size, np.float32)
+        s_test_unpad_out = self.create_socket_out(unpad_test, "u_out_t",  init_size, np.float32)
 
         # create codelets
-        self.create_codelet(pad, lambda slf, lsk, fid: slf.pad(lsk[s_pad_in], lsk[s_pad_out]))
+        self.create_codelet(pad,   lambda slf, lsk, fid: slf.pad(  lsk[s_pad_in],   lsk[s_pad_out]))
         self.create_codelet(unpad, lambda slf, lsk, fid: slf.unpad(lsk[s_unpad_in], lsk[s_unpad_out]))
+        self.create_codelet(unpad_test, lambda slf, lsk, fid: slf.unpad(lsk[s_test_unpad_in], lsk[s_test_unpad_out]))
 
     def pad(self, sig_in: np.ndarray, sig_out: np.ndarray):
         """Pad the received signal so that it has final_size components"""
         
-        # return padded signal
-        
-        sig_out[0,:] = np.concatenate((sig_in, np.zeros((1,self.pad_size), dtype=np.int32)), axis=1, dtype=np.int32)
-        
+        # return padded signal        
+        sig_out[0,:] = np.concatenate((sig_in, np.zeros((1,self.pad_size), dtype=np.float32)), axis=1, dtype=np.float32)
         return 0
 
     def unpad(self, padded_sig: np.ndarray, sig_out: np.ndarray):
         """Extract the first init_size components of sig"""
-        
+    
         sig_out[0,:] = padded_sig[0, 0:self.init_size]
-        
 
         return 0

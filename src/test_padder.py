@@ -1,6 +1,7 @@
 import pytest
 import os, sys
 from padder import Padder
+from passer import Passer
 import numpy as np
 from dotenv import load_dotenv
 
@@ -46,28 +47,53 @@ def test_padder_no_module_pads():
     assert(np.sum(sig_in - sig_out) == 0)
 
 
-def test_padder_as_module_pads():
+
+
+def test_padder_with_canal_no_error():
+    # -- parameters
     K = 1024
     N = 16384
-    sz_in  = (1,K)
+    sz_in  = (1,N)
     sz_out = (1,N)
-    mnt     = aff3ct.module.monitor.Monitor_BFER_AR(K,1000,1000)
-    sig_in  = np.random.randint(0,1,sz_in, dtype=np.int32)
-    sig_out = np.ndarray(sz_out, dtype=np.int32)
-
+    sigma = np.array([[0.001]], dtype=np.float32)
+    
+    # source
     src  = aff3ct.module.source.Source_random_fast(K,11)
+
+    # mod/demod
+    mdm = aff3ct.module.modem.Modem_BPSK_fast(N)
+    
+    # encode/decode
+    fbgen = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(K,N)
+    noise = aff3ct.tools.noise.Sigma(sigma)
+    fbgen.set_noise(noise)
+    frozen_bits = fbgen.generate()
+    enc  = aff3ct.module.encoder.Encoder_polar_sys(K,N,frozen_bits)
+    dec  = aff3ct.module.decoder.Decoder_polar_SC_fast_sys(K,N,frozen_bits)
+    
+    # pad/unpad
     padder = Padder(sz_in[1], sz_out[1])
+    
+    # canal
+    gen  = aff3ct.tools.Gaussian_noise_generator_implem.FAST
+    chn = aff3ct.module.channel.Channel_AWGN_LLR(N,gen)
+
+    # monitor
+    mnt = aff3ct.module.monitor.Monitor_BFER_AR(K,1000,1)
 
 
-    padder["pad ::p_in"]   = src["generate::U_K"]
-    padder["pad::p_out"]   = padder["unpad::u_in"]
-    padder["unpad::u_out"] = mnt["check_errors::V"]
-    mnt["check_errors::U"] = src["generate::U_K"]
+    enc["encode         ::U_K "] = src["generate    :: U_K "]
+    mdm["modulate      ::X_N1 "] = enc["encode::X_N"]
+    padder["pad        ::p_in "] = mdm["modulate:: X_N2"]
+    chn   ["add_noise  :: X_N "] = padder["pad         ::p_out"]
+    padder["unpad      ::u_in "] = chn   ["add_noise   :: Y_N "]
+    mdm["demodulate     ::Y_N1"] = padder["unpad      ::u_out"]
+    dec["decode_siho     ::Y_N"] = mdm["demodulate :: Y_N2"]
+    mnt   ["check_errors::  V "] = dec["decode_siho::V_K"]
+    mnt["check_errors  ::   U "] = src   ["generate    :: U_K "]
+    chn   ["add_noise  ::  CP "] = sigma
+    mdm["demodulate       ::CP"] = sigma
 
     seq = aff3ct.tools.sequence.Sequence(src["generate"], mnt["check_errors"],1)
     
     seq.exec()
-
-    ber = mnt.get_ber()
-
-    assert(ber == 0)
