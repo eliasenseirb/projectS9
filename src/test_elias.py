@@ -9,6 +9,7 @@ import time
 import math
 import matplotlib.pyplot as plt
 from Mod_MUX import py_MUX 
+from padder import Padder
 
 
 
@@ -51,6 +52,10 @@ def get_good_bits(frozen_bits):
 
 K = 512
 N = 1024
+
+sz_in  = (1,N)
+sz_out = (1,16384)
+
 ebn0_min = 0
 ebn0_max = 2.5
 ebn0_step = 0.25
@@ -80,14 +85,18 @@ enc = aff3ct.module.encoder.Encoder_polar_sys(K,N,frozen_bits)
 dec = aff3ct.module.decoder.Decoder_polar_SC_naive_sys(K,N,frozen_bits)
 mdm = aff3ct.module.modem.Modem_BPSK_fast(N)
 gen = aff3ct.tools.Gaussian_noise_generator_implem.FAST
-chn = aff3ct.module.channel.Channel_AWGN_LLR(N, gen)
+chn = aff3ct.module.channel.Channel_AWGN_LLR(16384, gen)
 mnt = aff3ct.module.monitor.Monitor_BFER_AR(8, 1000)
 mnt_ex = aff3ct.module.monitor.Monitor_BFER_AR(K, 0)
+
+padder = Padder(sz_in[1], sz_out[1])
+padder2 = Padder(sz_in[1], sz_out[1])
+
 
 #Eve
 dec2 = aff3ct.module.decoder.Decoder_polar_SC_naive_sys(K,N,frozen_bits)
 mdm2 = aff3ct.module.modem.Modem_BPSK_fast(N)
-chn2 = aff3ct.module.channel.Channel_AWGN_LLR(N,gen)
+chn2 = aff3ct.module.channel.Channel_AWGN_LLR(16384,gen)
 mnt2 = aff3ct.module.monitor.Monitor_BFER_AR(8,0)
 
 
@@ -98,8 +107,10 @@ sigma_wiretap = np.ndarray(shape = (1,1),  dtype = np.float32)
 mux["multiplexer        ::good_bits "] = src["generate    ::U_K "]
 enc["encode        ::U_K "] = (mux["multiplexer    ::sig_mux_out "])
 mdm["modulate     ::X_N1"] = (enc["encode     ::X_N "])
-chn["add_noise    ::X_N "].bind(mdm["modulate   ::X_N2"])
-mdm["demodulate   ::Y_N1"].bind(chn["add_noise  ::Y_N "])
+padder["pad        ::p_in "] = mdm["modulate:: X_N2"]
+chn   ["add_noise  :: X_N "] = padder["pad         ::p_out"]
+padder["unpad      ::u_in "] = chn   ["add_noise   :: Y_N "]
+mdm["demodulate     ::Y_N1"] = padder["unpad      ::u_out"]
 dec["decode_siho  ::Y_N "].bind(mdm["demodulate ::Y_N2"])
 
 mnt["check_errors ::U   "].bind(src["generate   ::U_K "])
@@ -110,8 +121,10 @@ chn["add_noise    ::CP  "].bind(                 sigma  )
 mdm["demodulate   ::CP  "].bind(                 sigma  )
 
 
-chn2["add_noise    ::X_N "].bind(mdm["modulate    ::X_N2"])
-mdm2["demodulate   ::Y_N1"].bind(chn2["add_noise  ::Y_N "])
+padder2["pad        ::p_in "] = mdm["modulate:: X_N2"]
+chn2   ["add_noise  :: X_N "] = padder2["pad         ::p_out"]
+padder2["unpad      ::u_in "] = chn2   ["add_noise   :: Y_N "]
+mdm2["demodulate     ::Y_N1"] = padder2["unpad      ::u_out"]
 dec2["decode_siho  ::Y_N "].bind(mdm2["demodulate ::Y_N2"])
 mnt2["check_errors  ::U  "].bind(src["generate    ::U_K "])
 
