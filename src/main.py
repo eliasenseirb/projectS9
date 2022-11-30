@@ -87,21 +87,21 @@ frozen_bits = fbgen.generate()
 # display_frozen_bits(frozen_bits) # uncomment to display
 
 # signal source
-src  = aff3ct.module.source.Source_random_fast(8,12)
+src  = aff3ct.module.source.Source_random_fast(K,12)
 
 # MUX
 good_bits = get_good_bits(frozen_bits)
 print('GOOD_BITS = ', good_bits[0:8])
 
-
+#good_bits =
 mux = py_MUX(good_bits[0:8], K)
 
 # encoder
 enc  = aff3ct.module.encoder.Encoder_polar_sys(K,N,frozen_bits)
 
 # decoder
-dec  = aff3ct.module.decoder.Decoder_polar_SC_fast_sys(K,N,frozen_bits)
-dec2 = aff3ct.module.decoder.Decoder_polar_SC_fast_sys(K,N,frozen_bits)
+dec  = aff3ct.module.decoder.Decoder_polar_SC_naive_sys(K,N,frozen_bits)
+dec2 = aff3ct.module.decoder.Decoder_polar_SC_naive_sys(K,N,frozen_bits)
 # modulator
 mdm  = aff3ct.module.modem.Modem_BPSK_fast(N)
 mdm2 = aff3ct.module.modem.Modem_BPSK_fast(N)
@@ -111,15 +111,17 @@ gen  = aff3ct.tools.Gaussian_noise_generator_implem.FAST
 chn  = aff3ct.module.channel.Channel_AWGN_LLR(N,gen)
 chn2 = aff3ct.module.channel.Channel_AWGN_LLR(N,gen)
 # monitor
-mnt  = aff3ct.module.monitor.Monitor_BFER_AR(8,1000, 10)
+mnt  = aff3ct.module.monitor.Monitor_BFER_AR(K,1000, 1)
 mnt2 = aff3ct.module.monitor.Monitor_BFER_AR(K,1000)
 
 # Link sockets together
 sigma         = np.ndarray(shape = (1,1),  dtype = np.float32)
 sigma_wiretap = np.ndarray(shape = (1,1),  dtype = np.float32)
 
-mux["multiplexer        ::good_bits "].bind(src["generate    ::U_K "])
-enc["encode        ::U_K "].bind(mux["multiplexer    ::sig_mux_out "])
+#mux["multiplexer        ::good_bits "].bind(src["generate    ::U_K "])
+#enc["encode        ::U_K "].bind(mux["multiplexer    ::sig_mux_out "])
+
+enc["encode        ::U_K "].bind(src["generate    ::U_K "])
 mdm["modulate      ::X_N1"].bind(enc["encode      ::X_N "])
 
 
@@ -131,8 +133,11 @@ dec["decode_siho   ::Y_N "].bind(mdm["demodulate  ::Y_N2"])
 #dec2["decode_siho  ::Y_N "].bind(mdm2["demodulate ::Y_N2"])
 mnt["check_errors  ::U   "].bind(src["generate    ::U_K "])
 
-mux["demultiplexer  ::sig_mux_in   "].bind(dec["decode_siho ::V_K "])
-mnt["check_errors  ::V  "].bind(mux["demultiplexer  ::sig_demux"])
+#mux["demultiplexer  ::sig_mux_in   "].bind(dec["decode_siho ::V_K "])
+#mnt["check_errors  ::V  "].bind(mux["demultiplexer  ::sig_demux"])
+
+mnt["check_errors  ::V  "].bind(dec["decode_siho ::V_K "])
+
 chn["add_noise     ::CP  "].bind(                  sigma  )
 mdm["demodulate    ::CP  "].bind(                  sigma  )
 """
@@ -142,9 +147,14 @@ chn2["add_noise    ::CP  "].bind(          sigma_wiretap  )
 mdm2["demodulate   ::CP  "].bind(          sigma_wiretap  )
 """
 
-seq  = aff3ct.tools.sequence.Sequence(src("generate"), mnt("check_errors"), 4)
+seq  = aff3ct.tools.sequence.Sequence(src("generate"), mnt("check_errors"), 1)
+#seq.export_dot('mux.dot')
 
-
+for lt in seq.get_tasks_per_types():
+    for t in lt:
+        t.debug = True
+        t.set_debug_limit(10)
+        
 fer   = np.zeros(len(ebn0))
 ber   = np.zeros(len(ebn0))
 fer_w = np.zeros(len(ebn0))
@@ -166,54 +176,42 @@ ax.set_ylabel("Pe")
 plt.ylim((1e-6, 1))
 
 print("Eb/NO | FRA | BER | FER | Tpt ")
+i=0
 for i in range(len(sigma_vals)):
-# 	sigma[:] = sigma_vals[i]
-	sigma[:] = 0
+    sigma[:] = sigma_vals[i]
 
-	"""
-	sigma_wiretap[:] = sigma_vals[i]
-	"""
-	noise = aff3ct.tools.noise.Sigma(sigma_vals[i])
-	fbgen.set_noise(noise)
-	frozen_bits = fbgen.generate()
-	enc.set_frozen_bits(frozen_bits)
-	dec.set_frozen_bits(frozen_bits)
-	"""
-	noise = aff3ct.tools.noise.Sigma(sigma_vals_w[i])
-	fbgen.set_noise(noise)
-	frozen_bits = fbgen.generate()
-	dec2.set_frozen_bits(frozen_bits)
-	"""
-	t = time.time()
+    noise = aff3ct.tools.noise.Sigma(sigma_vals[i])
+    fbgen.set_noise(noise)
+    frozen_bits = fbgen.generate()
+    enc.set_frozen_bits(frozen_bits)
+    dec.set_frozen_bits(frozen_bits)
 
+    t = time.time()
+    seq.exec()
 
-	seq.exec()
+    elapsed = time.time() - t
+    total_fra = mnt.get_n_analyzed_fra()
 
+    ber[i] = mnt.get_ber()
+    fer[i] = mnt.get_fer()
 
-	
-	elapsed = time.time() - t
-	total_fra = mnt.get_n_analyzed_fra()
+    #ber_w[i] = mnt2.get_ber()
+    #fer_w[i] = mnt2.get_fer()
 
-	ber[i] = mnt.get_ber()
-	fer[i] = mnt.get_fer()
-	"""
-	ber_w[i] = mnt2.get_ber()
-	fer_w[i] = mnt2.get_fer()
-	"""
-	tpt = total_fra * K * 1e-6/elapsed
-	print( ebn0[i] , "|",  total_fra, "|", ber[i] ,"|", fer[i] , "|", tpt)
+    tpt = total_fra * K * 1e-6/elapsed
+    print( ebn0[i] , "|",  total_fra, "|", ber[i] ,"|", fer[i] , "|", tpt)
 
-	mnt.reset()
+    mnt.reset()
 
-	line1.set_ydata(fer)
-	line2.set_ydata(ber)
-	"""
-	line3.set_ydata(fer_w)
-	line4.set_ydata(ber_w)
-	"""
-	fig.canvas.draw()
-	fig.canvas.flush_events()
-	plt.pause(1e-6)
+    line1.set_ydata(fer)
+    line2.set_ydata(ber)
+
+    #line3.set_ydata(fer_w)
+    #line4.set_ydata(ber_w)
+
+    fig.canvas.draw()
+    fig.canvas.flush_events()
+    plt.pause(1e-6)
 
 seq.show_stats()
 plt.show()

@@ -33,10 +33,12 @@ def get_good_bits(frozen_bits):
             good_bits.append(i)
     return good_bits 
 
-frozen = np.array([1, 1, 0, 0, 0, 1, 0], dtype=int)
+def test_get_good_bits():
+    good_bits = [2, 3, 4, 6]
+    frozen = np.array([1, 1, 0, 0, 0, 1, 0], dtype=int)
+    good = get_good_bits(frozen)
 
-good = get_good_bits(frozen)
-print('good bits : ', good)
+    assert([good_bits[i] == good[i] for i in range(len(good))])
 
 
 N_code = 1024 #taille du code
