@@ -40,17 +40,13 @@ def test_get_good_bits():
 
     assert([good_bits[i] == good[i] for i in range(len(good))])
 
+def test_chaine_MUX():
+    N_code = 1024 #taille du code
+    pos = np.array([122, 627, 4, 422, 188], dtype=int) #position des bits bons pour bob et mauvais pour eve
+    good_bits = np.array([2, 5, 99, 4, 8], dtype=int) #ce qui vient de la source
+    
+    sig_mux = multiplexeur(good_bits, pos, N_code)
+    sig_demux = demultiplexeur(sig_mux, pos, N_code)
 
-N_code = 1024 #taille du code
-pos = np.array([122, 627, 4, 422, 188], dtype=int) #position des bits bons pour bob et mauvais pour eve
-bits_bons = np.array([2, 5, 99, 4, 8], dtype=int) #ce qui vient de la source
-
-
-
-
-# sig_mux = multiplexeur(bits_bons, pos, N_code)
-# print('SIG mux : ', sig_mux)
-
-# sig_demux = demultiplexeur(sig_mux, pos, N_code)
-# print('SIG demux : ', sig_demux)
+    assert([good_bits[i] == sig_demux[i] for i in range(len(sig_demux))])
 

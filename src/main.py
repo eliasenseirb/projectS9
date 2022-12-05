@@ -35,12 +35,13 @@ def display_frozen_bits(frozen_bits):
         else:
             bits[i,:] = green
 
-
     plt.imshow(bits)
     plt.title("Frozen bits of the polar code")
     plt.show()
 
+
 def get_good_bits(frozen_bits):
+	#gives the positions of the 'good bits' according to the frozen ones
     good_bits = []
     N = len(frozen_bits)
     for i in range(N):
@@ -49,7 +50,7 @@ def get_good_bits(frozen_bits):
     return good_bits        
     
 
-
+##Parameters
 K = 512
 N = 1024
 
@@ -65,98 +66,16 @@ esn0 = ebn0 + 10 * math.log10(K/N)
 sigma_vals = 1/(math.sqrt(2) * 10 ** (esn0 / 20))
 
 
+
 fbgen = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(K, N)
 noise = aff3ct.tools.noise.Sigma(sigma_vals[0])
 fbgen.set_noise(noise)
 frozen_bits = fbgen.generate()
 
-src = aff3ct.module.source.Source_random_fast(8, 12)
 
-# MUX
-good_bits = get_good_bits(frozen_bits)
-print('GOOD_BITS = ', good_bits[0:8])
-mux = py_MUX(good_bits[0:8], K)
-mux2 = py_MUX(good_bits[0:8], K)
-
-
-
-#Bob
-enc = aff3ct.module.encoder.Encoder_polar_sys(K,N,frozen_bits)
-dec = aff3ct.module.decoder.Decoder_polar_SC_naive_sys(K,N,frozen_bits)
-mdm = aff3ct.module.modem.Modem_BPSK_fast(N)
-gen = aff3ct.tools.Gaussian_noise_generator_implem.FAST
-chn = aff3ct.module.channel.Channel_AWGN_LLR(16384, gen)
-mnt = aff3ct.module.monitor.Monitor_BFER_AR(8, 1000)
-mnt_ex = aff3ct.module.monitor.Monitor_BFER_AR(K, 0)
-
-padder = Padder(sz_in[1], sz_out[1])
-padder2 = Padder(sz_in[1], sz_out[1])
-
-
-#Eve
-dec2 = aff3ct.module.decoder.Decoder_polar_SC_naive_sys(K,N,frozen_bits)
-mdm2 = aff3ct.module.modem.Modem_BPSK_fast(N)
-chn2 = aff3ct.module.channel.Channel_AWGN_LLR(16384,gen)
-mnt2 = aff3ct.module.monitor.Monitor_BFER_AR(8,0)
-
-
-sigma = np.ndarray(shape = (1,1),  dtype = np.float32)
-sigma_wiretap = np.ndarray(shape = (1,1),  dtype = np.float32)
-
-
-mux["multiplexer        ::good_bits "] = src["generate    ::U_K "]
-enc["encode        ::U_K "] = (mux["multiplexer    ::sig_mux_out "])
-mdm["modulate     ::X_N1"] = (enc["encode     ::X_N "])
-padder["pad        ::p_in "] = mdm["modulate:: X_N2"]
-chn   ["add_noise  :: X_N "] = padder["pad         ::p_out"]
-padder["unpad      ::u_in "] = chn   ["add_noise   :: Y_N "]
-mdm["demodulate     ::Y_N1"] = padder["unpad      ::u_out"]
-dec["decode_siho  ::Y_N "].bind(mdm["demodulate ::Y_N2"])
-
-mnt["check_errors ::U   "].bind(src["generate   ::U_K "])
-mux["demultiplexer  ::sig_mux_in   "].bind(dec["decode_siho ::V_K "])
-mnt["check_errors  ::V  "].bind(mux["demultiplexer  ::sig_demux"])
-
-chn["add_noise    ::CP  "].bind(                 sigma  )
-mdm["demodulate   ::CP  "].bind(                 sigma  )
-
-
-padder2["pad        ::p_in "] = mdm["modulate:: X_N2"]
-chn2   ["add_noise  :: X_N "] = padder2["pad         ::p_out"]
-padder2["unpad      ::u_in "] = chn2   ["add_noise   :: Y_N "]
-mdm2["demodulate     ::Y_N1"] = padder2["unpad      ::u_out"]
-dec2["decode_siho  ::Y_N "].bind(mdm2["demodulate ::Y_N2"])
-mnt2["check_errors  ::U  "].bind(src["generate    ::U_K "])
-
-mux2["demultiplexer  ::sig_mux_in   "].bind(dec2["decode_siho ::V_K "])
-mnt2["check_errors  ::V  "].bind(mux2["demultiplexer  ::sig_demux"])
-
-#mnt2["check_errors  ::V  "].bind(dec2["decode_siho ::V_K "])
-chn2["add_noise    ::CP  "].bind(          sigma_wiretap  )
-mdm2["demodulate   ::CP  "].bind(          sigma_wiretap  )
-
-#renvoie le PER pour la courbe d'exemple
-mnt_ex["check_errors ::U   "].bind(mux["multiplexer    ::sig_mux_out "])
-mnt_ex["check_errors ::V   "].bind(dec["decode_siho::V_K "])
-
-#src("generate"    ).stats = True
-#enc("encode"      ).stats = True
-#mdm("modulate"    ).stats = True
-#chn("add_noise"   ).stats = True
-#mdm("demodulate"  ).stats = True
-#dec("decode_siho" ).stats = True
-#mnt("check_errors").stats = True
-
-seq  = aff3ct.tools.sequence.Sequence(src["generate"], 1)
-
-"""for lt in seq.get_tasks_per_types():
-	for t in lt:
-		t.debug = True
-		t.set_debug_limit(10)
-	"""
+#Cure parameters
 fer = np.zeros(len(ebn0))
 ber = np.zeros(len(ebn0))
-
 fer_w = np.zeros(len(ebn0))
 ber_w = np.zeros(len(ebn0))
 
@@ -174,9 +93,89 @@ ax.set_xlabel("SNR (dB)")
 ax.set_ylabel("Pe")
 plt.ylim((1e-6, 1))
 
-
-
 print("Eb/NO | FRA | BER | FER | FER2 | Tpt ")
+
+
+##Modules' initialization
+good_bits = get_good_bits(frozen_bits)
+
+#Bob
+src = aff3ct.module.source.Source_random_fast(8, 12)
+mux = py_MUX(good_bits[0:8], K)
+enc = aff3ct.module.encoder.Encoder_polar_sys(K,N,frozen_bits)
+dec = aff3ct.module.decoder.Decoder_polar_SC_naive_sys(K,N,frozen_bits)
+mdm = aff3ct.module.modem.Modem_BPSK_fast(N)
+gen = aff3ct.tools.Gaussian_noise_generator_implem.FAST
+padder = Padder(sz_in[1], sz_out[1])
+chn = aff3ct.module.channel.Channel_AWGN_LLR(16384, gen)
+mnt = aff3ct.module.monitor.Monitor_BFER_AR(8, 1000)
+
+#Eve
+mux2 = py_MUX(good_bits[0:8], K)
+dec2 = aff3ct.module.decoder.Decoder_polar_SC_naive_sys(K,N,frozen_bits)
+mdm2 = aff3ct.module.modem.Modem_BPSK_fast(N)
+padder2 = Padder(sz_in[1], sz_out[1])
+chn2 = aff3ct.module.channel.Channel_AWGN_LLR(16384,gen)
+mnt2 = aff3ct.module.monitor.Monitor_BFER_AR(8,0)
+
+#Monitor to observe all the bits
+mnt_ex = aff3ct.module.monitor.Monitor_BFER_AR(K, 0)
+
+
+sigma = np.ndarray(shape = (1,1),  dtype = np.float32)
+sigma_wiretap = np.ndarray(shape = (1,1),  dtype = np.float32)
+
+## Modules' connection
+
+#Bob
+mux["multiplexer        ::good_bits "] = src["generate    ::U_K "]
+enc["encode        ::U_K "] = (mux["multiplexer    ::sig_mux_out "])
+mdm["modulate     ::X_N1"] = (enc["encode     ::X_N "])
+padder["pad        ::p_in "] = mdm["modulate:: X_N2"]
+chn   ["add_noise  :: X_N "] = padder["pad         ::p_out"]
+padder["unpad      ::u_in "] = chn   ["add_noise   :: Y_N "]
+mdm["demodulate     ::Y_N1"] = padder["unpad      ::u_out"]
+dec["decode_siho  ::Y_N "] = mdm["demodulate ::Y_N2"]
+mnt["check_errors ::U   "] = src["generate   ::U_K "]
+mux["demultiplexer  ::sig_mux_in   "] = dec["decode_siho ::V_K "]
+mnt["check_errors  ::V  "] = mux["demultiplexer  ::sig_demux"]
+chn["add_noise    ::CP  "] = sigma
+mdm["demodulate   ::CP  "] = sigma
+
+#Eve
+padder2["pad        ::p_in "] = mdm["modulate:: X_N2"]
+chn2   ["add_noise  :: X_N "] = padder2["pad         ::p_out"]
+padder2["unpad      ::u_in "] = chn2   ["add_noise   :: Y_N "]
+mdm2["demodulate     ::Y_N1"] = padder2["unpad      ::u_out"]
+dec2["decode_siho  ::Y_N "] = mdm2["demodulate ::Y_N2"]
+mnt2["check_errors  ::U  "] = src["generate    ::U_K "]
+mux2["demultiplexer  ::sig_mux_in   "] = dec2["decode_siho ::V_K "]
+mnt2["check_errors  ::V  "] = mux2["demultiplexer  ::sig_demux"]
+chn2["add_noise    ::CP  "] = sigma_wiretap
+mdm2["demodulate   ::CP  "] = sigma_wiretap
+
+#Displays the PER for the bfer_polar.py code
+mnt_ex["check_errors ::U   "] = mux["multiplexer    ::sig_mux_out "]
+mnt_ex["check_errors ::V   "] = dec["decode_siho::V_K "]
+
+#src("generate"    ).stats = True
+#enc("encode"      ).stats = True
+#mdm("modulate"    ).stats = True
+#chn("add_noise"   ).stats = True
+#mdm("demodulate"  ).stats = True
+#dec("decode_siho" ).stats = True
+#mnt("check_errors").stats = True
+
+seq  = aff3ct.tools.sequence.Sequence(src["generate"], 1)
+
+#Debug code
+"""for lt in seq.get_tasks_per_types():
+	for t in lt:
+		t.debug = True
+		t.set_debug_limit(10)
+	"""
+
+#BER loop
 for i in range(len(sigma_vals)):
 	sigma[:] = sigma_vals[i]
 	noise = aff3ct.tools.noise.Sigma(sigma_vals[i])
