@@ -22,6 +22,13 @@ class Padder(Py_Module):
         self.name = "padder"            # module name
         self.pad_size = self.final_size - self.init_size
 
+        self.pattern = np.array([[0,1]], dtype=np.float32)
+        self.pad_sig = np.tile(self.pattern, self.pad_size//2)
+
+        # odd case
+        if self.pad_size % 2 != 0:
+            self.pad_sig = np.concatenate((self.pad_sig, np.array([[0]], dtype=np.float32)), axis=1, dtype=np.float32)
+
         pad   = self.create_task("pad")
         unpad = self.create_task("unpad")
         unpad_test = self.create_task("unpad_test")
@@ -46,7 +53,7 @@ class Padder(Py_Module):
         """Pad the received signal so that it has final_size components"""
         
         # return padded signal        
-        sig_out[0,:] = np.concatenate((sig_in, np.zeros((1,self.pad_size), dtype=np.float32)), axis=1, dtype=np.float32)
+        sig_out[0,:] = np.concatenate((sig_in, self.pad_sig), axis=1, dtype=np.float32)
         return 0
 
     def unpad(self, padded_sig: np.ndarray, sig_out: np.ndarray):
