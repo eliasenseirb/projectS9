@@ -119,7 +119,10 @@ mdm["demodulate    ::CP  "].bind(                  sigma  )
 mdm2["demodulate   ::CP  "].bind(          sigma_wiretap  )
 
 
-seq  = aff3ct.tools.sequence.Sequence(src("generate"), mnt("check_errors"), 4)
+seq  = aff3ct.tools.sequence.Sequence(src("generate"), mnt("check_errors"), 1)
+
+seq.export_dot("BFER_polar.dot")
+breakpoint()
 
 
 fer   = np.zeros(len(ebn0))

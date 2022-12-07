@@ -47,8 +47,6 @@ def test_padder_no_module_pads():
     assert(np.sum(sig_in - sig_out) == 0)
 
 
-
-
 def test_padder_with_canal_no_error():
     # -- parameters
     K = 1024
