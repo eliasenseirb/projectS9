@@ -19,9 +19,6 @@ import math
 
 MODCOD     = "QPSK-S_8/9"
 n_frames   = 1
-frame_rate = 25
-freq_shift = 0.025
-Es_N0_dB   = 10
 path = "./text.txt"
 Fs = 1e6
 Fc = 868e6
@@ -30,8 +27,6 @@ dvs2_factory = dvbs2_factory(MODCOD,file_path= path, n_frames=n_frames)
 dvs2_factory.ldpc_codec_f.decoder_params.inter = True
 dvs2_factory.bch_codec_f.inter = True
 
-Es_N0      = 10**(Es_N0_dB/10)
-sigma      = 1/math.sqrt(2*Es_N0)
 
 
 # Build the TX modules
