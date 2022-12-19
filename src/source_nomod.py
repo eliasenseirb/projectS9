@@ -30,7 +30,7 @@ class Source:
         return tab
 
     def readimg(self, binary_sequence):
-        binary_sequence[0,:] = [int(x) for x in self.img_bin[self.ptr_tx:self.ptr_tx+self.sec_sz]]
+        binary_sequence[0,self.ptr_tx:self.ptr_tx+self.sec_sz] = [int(x) for x in self.img_bin[self.ptr_tx:self.ptr_tx+self.sec_sz]]
         binary_sequence[0,:] = np.array(binary_sequence)
         self.ptr_tx += self.sec_sz
 
@@ -69,6 +69,12 @@ class Source:
             binary= ''.join(tab_bin)
         return binary
 
+    @property
+    def can_read(self):
+        """Ne pas utiliser dans la version module !!!!"""
+        if self.ptr_tx > len(self.img_bin):
+            return False
+        return True
 
     # Step 3
     def __init__(self, img, secrecy_K):

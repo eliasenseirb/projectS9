@@ -78,3 +78,26 @@ def test_source_img2bin_converts_pseudo_image_correctly():
     # element comparison
     for i in range(len(src.img_bin)):
         assert(src.img_bin[i] == expected_img2bin[i])
+
+def test_source_can_read_whole_image_correctly():
+    
+    img = np.array([[1,2],[3,4]])
+    img_sz = 4
+    secrecy_sz = 8 # 1 octet
+    src = Source(img, secrecy_sz)
+
+    expected_bin = np.array([[0,0,0,0,0,0,0,1, 
+                              0,0,0,0,0,0,1,0, 
+                              0,0,0,0,0,0,1,1, 
+                              0,0,0,0,0,1,0,0]], dtype=np.int32)
+    read_bin = np.ndarray((1,secrecy_sz*img_sz), dtype=np.int32)
+
+    while (src.can_read):
+        src.readimg(read_bin)
+
+    # shape comparison
+    assert(expected_bin.shape == read_bin.shape)
+    
+    # element comparison
+    for i in range(secrecy_sz*img_sz):
+        assert(read_bin[0,i] == expected_bin[0,i])
