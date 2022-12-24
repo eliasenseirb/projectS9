@@ -1,20 +1,27 @@
-from signal import pause
+from dotenv import load_dotenv
+import os
 import sys
-sys.path.insert(0, '../build/lib') # pyaf location
-sys.path.insert(0, '../py_aff3ct/build/lib') # py_aff3ct location
-sys.path.insert(0, '../src/python') # place of some useful python classes
-from py_aff3ct import module as mdl
+
+load_dotenv()
+# ensure we can find aff3ct
+sys.path.append(os.getenv("AFF3CT_PATH"))
+import py_aff3ct as aff3ct
+
+sys.path.append(os.getenv("PYAF_PATH"))
 import pyaf
-import py_aff3ct
+
+sys.path.append(os.getenv("THREADED_PATH"))
+import threaded_sequence
+
+
 from dvbs2_factory import dvbs2_factory
+from signal import pause
 from threaded_sequence import threaded_sequence
-from sck_plot import sck_plot
-from sck_waterfall import sck_waterfall
-import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
 import numpy as np
 import time
-import math
+import matplotlib.pyplot as plt
+from Modules.Mod_MUX import py_MUX 
+from Modules.padder import Padder
 
 
 MODCOD     = "QPSK-S_8/9"
@@ -51,7 +58,7 @@ gain = pyaf.multiplier.Multiplier_sequence_ccc(N_chn_spls,v,n_frames)
 # Build radio
 rad_params = pyaf.radio.USRP_params()
 rad_params.fifo_size  = 100
-rad_params.N          = N_chn_spls//2 
+rad_params.N          = 16384//2 
 rad_params.threaded   = True
 rad_params.tx_enabled = True
 rad_params.usrp_addr  = "type=b100"
@@ -64,36 +71,110 @@ rad      = pyaf.radio.Radio_USRP(rad_params)
 rad.n_frames = n_frames
 
 
+# Code pour envoyer du texte
 
-source          [   "generate::U_K" ] = bb_scrambler    [   "scramble::X_N1"]
-bb_scrambler    [   "scramble::X_N2"] = bch_encoder     [     "encode::U_K" ]
-bch_encoder     [     "encode::X_N" ] = ldpc_encoder    [     "encode::U_K" ]
-ldpc_encoder    [     "encode::X_N" ] = modem           [   "modulate::X_N1"]
-framer          [   "generate::Y_N1"] = modem           [   "modulate::X_N2"]
-framer          [   "generate::Y_N2"] = pl_scrambler    [   "scramble::X_N1"]
-shp_filter      [     "filter::X_N1"] = pl_scrambler    [   "scramble::X_N2"]
-
-shp_filter      [     "filter::Y_N2"] = gain["imultiply::X_N"]
-rad             [       "send::X_N1"] = gain["imultiply::Z_N"]
+# source          [   "generate::U_K" ] = bb_scrambler    [   "scramble::X_N1"]
+# bb_scrambler    [   "scramble::X_N2"] = bch_encoder     [     "encode::U_K" ]
+# bch_encoder     [     "encode::X_N" ] = ldpc_encoder    [     "encode::U_K" ]
+# ldpc_encoder    [     "encode::X_N" ] = modem           [   "modulate::X_N1"]
+# framer          [   "generate::Y_N1"] = modem           [   "modulate::X_N2"]
+# framer          [   "generate::Y_N2"] = pl_scrambler    [   "scramble::X_N1"]
+# shp_filter      [     "filter::X_N1"] = pl_scrambler    [   "scramble::X_N2"]
 
 
 
 
-sequence = threaded_sequence(source["generate"]) # py_aff3ct.tools.sequence.Sequence
+# sequence = threaded_sequence(source["generate"]) # py_aff3ct.tools.sequence.Sequence
+# sequence.export_dot("test.dot")
+# for lt in sequence.get_tasks_per_types():
+#     for t in lt:
+#         t.stats = True
+#         #t.debug = True
+#         #t.set_debug_precision(8)
+#         #t.set_debug_limit(10)
+
+
+# sequence.start()
+# initial_time = time.time()
+# while sequence.is_alive():
+#     #print(source          [   "generate::U_K" ][:])
+#     print(bb_scrambler    [   "scramble::X_N1"][:])
+#     pass
+
+# sequence.show_stats()
+
+
+def display_frozen_bits(frozen_bits):
+    # representation
+    blue  = [0, 0, 255]
+    green = [0, 255, 0]
+
+    bits = np.ndarray((len(frozen_bits),40,3))
+
+    for i, bit in enumerate(frozen_bits):
+        if bit:
+            bits[i,:] = blue
+        else:
+            bits[i,:] = green
+
+    plt.imshow(bits)
+    plt.title("Frozen bits of the polar code")
+    plt.show()
+
+
+def get_good_bits(frozen_bits):
+	#gives the positions of the 'good bits' according to the frozen ones
+    good_bits = []
+    N = len(frozen_bits)
+    for i in range(N):
+        if not frozen_bits[i]:
+            good_bits.append(i)
+    return good_bits        
+    
+
+##Parameters
+K = 512
+N = 1024
+
+sz_in  = (1,N)
+sz_out = (1,16384)
+sigma = 1e-9
+
+
+fbgen = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(K, N)
+noise = aff3ct.tools.noise.Sigma(sigma)
+fbgen.set_noise(noise)
+frozen_bits = fbgen.generate()
+
+
+good_bits = get_good_bits(frozen_bits)
+mux = py_MUX(good_bits[0:8], K)
+enc = aff3ct.module.encoder.Encoder_polar_sys(K,N,frozen_bits)
+mdm = aff3ct.module.modem.Modem_BPSK_fast(N)
+padder = Padder(sz_in[1], sz_out[1])
+
+
+## Modules' connection
+
+mux["multiplexer        ::good_bits "] = source["generate    ::U_K "]
+enc["encode        ::U_K "] = mux["multiplexer    ::sig_mux_out "]
+mdm["modulate     ::X_N1"] = enc["encode     ::X_N "]
+padder["pad        ::p_in "] = mdm["modulate:: X_N2"]
+rad   [       "send::X_N1"] = padder["pad         ::p_out"]
+
+sequence = threaded_sequence(source["generate"],1) # py_aff3ct.tools.sequence.Sequence
 sequence.export_dot("test.dot")
 for lt in sequence.get_tasks_per_types():
     for t in lt:
         t.stats = True
-        #t.debug = True
-        #t.set_debug_precision(8)
-        #t.set_debug_limit(10)
-
-
+        t.debug = True
+        t.set_debug_precision(8)
+        t.set_debug_limit(10)
+        
 sequence.start()
 initial_time = time.time()
 while sequence.is_alive():
-    #print(source          [   "generate::U_K" ][:])
-    print(bb_scrambler    [   "scramble::X_N1"][:])
+    #print(rad   [       "send::X_N1"][:])
     pass
 
 sequence.show_stats()

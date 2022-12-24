@@ -26,7 +26,8 @@ class dvbs2_factory():
                  modcod   = "QPSK-S_8/9",
                  osf      = 2,
                  file_path = '',
-                 n_frames = 1):
+                 n_frames = 1,
+                 K=8):
 
         if modcod == "QPSK-S_8/9":
             R_LDPC  = 8/9
@@ -63,7 +64,7 @@ class dvbs2_factory():
 
         self.bch_codec_f                 = bch_codec_factory                (N_BCH,                            n_frames = n_frames)
         self.bb_scrambler_f              = bb_scrambler_factory             (self.bch_codec_f.K,               n_frames = n_frames)
-        self.source_f                    = source_factory                   (self.bch_codec_f.K, file_path= file_path              ,n_frames = n_frames)
+        self.source_f                    = source_factory                   (K, file_path= file_path              ,n_frames = n_frames)
         self.ldpc_codec_f                = ldpc_codec_factory               (K_LDPC, N_LDPC,                   n_frames = n_frames)
         self.modem_f                     = modem_factory                    (N_LDPC, M,                        n_frames = n_frames)
         self.framer_f                    = framer_factory                   (Ns, modcod,                       n_frames = n_frames)
