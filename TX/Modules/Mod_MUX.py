@@ -28,14 +28,14 @@ class py_MUX(Py_Module):
         sig_mux[:,:] = np.random.randint(2, size=(1,N_code))
         #print(f"after sig_mux SHAPE + ID: {sig_mux.shape},{id(sig_mux)}")
 
-        for i in range(8):
-            if positions[i] > N_code or positions[i] < 0:
-                raise ValueError("Error: positions["+ str(i) +"] (" + str(positions[i]) + ") must be between 0 and N_code (" + str(N_code) + ")")
-            if 8 != good_bits_sz:
-                raise ValueError("Error: 8 != len(good_bits) (" + str(8) + " != " + str(len(good_bits)) + ")")
-            
-            sig_mux[0,positions[i]] = good_bits[0,i]     
-            #print(f"pos = {positions[i]}, bit_val = {good_bits[0,i]}")    
+        # for i in range(8):
+        #     if positions[i] > N_code or positions[i] < 0:
+        #         raise ValueError("Error: positions["+ str(i) +"] (" + str(positions[i]) + ") must be between 0 and N_code (" + str(N_code) + ")")
+        #     if 8 != good_bits_sz:
+        #         raise ValueError("Error: 8 != len(good_bits) (" + str(8) + " != " + str(len(good_bits)) + ")")
+        sig_mux[0,positions] = good_bits[0,:]   
+        #     sig_mux[0,positions[i]] = good_bits[0,i]     
+        #     #print(f"pos = {positions[i]}, bit_val = {good_bits[0,i]}")    
         
         return 0
 

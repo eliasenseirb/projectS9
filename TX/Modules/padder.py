@@ -22,27 +22,27 @@ class Padder(Py_Module):
         self.name = "padder"            # module name
         self.pad_size = self.final_size - self.init_size
 
-        self.pattern = np.array([[0,1]], dtype=np.float32)
+        self.pattern = np.array([[0,1]], dtype=np.int32)
         self.pad_sig = np.tile(self.pattern, self.pad_size//2)
 
         # odd case
         if self.pad_size % 2 != 0:
-            self.pad_sig = np.concatenate((self.pad_sig, np.array([[0]], dtype=np.float32)), axis=1, dtype=np.float32)
+            self.pad_sig = np.concatenate((self.pad_sig, np.array([[0]], dtype=np.int32)), axis=1, dtype=np.int32)
 
         pad   = self.create_task("pad")
         unpad = self.create_task("unpad")
         unpad_test = self.create_task("unpad_test")
 
-        s_pad_in  = self.create_socket_in(pad,   "p_in",  init_size, np.float32)
-        s_pad_out = self.create_socket_out(pad, "p_out", final_size, np.float32)
+        s_pad_in  = self.create_socket_in(pad,   "p_in",  init_size, np.int32)
+        s_pad_out = self.create_socket_out(pad, "p_out", final_size, np.int32)
 
         # cas reel (canal)
-        s_unpad_in  = self.create_socket_in(unpad,   "u_in", final_size, np.float32)
-        s_unpad_out = self.create_socket_out(unpad, "u_out",  init_size, np.float32)
+        s_unpad_in  = self.create_socket_in(unpad,   "u_in", final_size, np.int32)
+        s_unpad_out = self.create_socket_out(unpad, "u_out",  init_size, np.int32)
 
         # tests (sans canal)
-        s_test_unpad_in  = self.create_socket_in(unpad_test,   "u_in_t", final_size, np.float32)
-        s_test_unpad_out = self.create_socket_out(unpad_test, "u_out_t",  init_size, np.float32)
+        s_test_unpad_in  = self.create_socket_in(unpad_test,   "u_in_t", final_size, np.int32)
+        s_test_unpad_out = self.create_socket_out(unpad_test, "u_out_t",  init_size, np.int32)
 
         # create codelets
         self.create_codelet(pad,   lambda slf, lsk, fid: slf.pad(  lsk[s_pad_in],   lsk[s_pad_out]))
@@ -53,7 +53,7 @@ class Padder(Py_Module):
         """Pad the received signal so that it has final_size components"""
         
         # return padded signal        
-        sig_out[0,:] = np.concatenate((sig_in, self.pad_sig), axis=1, dtype=np.float32)
+        sig_out[0,:] = np.concatenate((sig_in, self.pad_sig), axis=1, dtype=np.int32)
         return 0
 
     def unpad(self, padded_sig: np.ndarray, sig_out: np.ndarray):
