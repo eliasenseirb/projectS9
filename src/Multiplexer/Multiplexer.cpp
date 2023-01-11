@@ -31,13 +31,32 @@ Multiplexer(const std::vector<int> & positions, const int N_code)
 										          frame_id);
 		return 0;
 	});
+	auto &p2 = this->create_task("demultiplexer");
+	auto p2s_in = this->template create_socket_in <float>(p2, "mux_sequence", this->N_code);
+	auto p2s_out = this->template create_socket_out <float>(p2, "good_bits", this->positions.size());
+	this->create_codelet(p2, [p2s_in, p2s_out](Module &m, Task &t, const size_t frame_id) -> int
+	{
+		static_cast<Multiplexer&>(m)._demultiplexer(static_cast<float*>(t[p2s_in].get_dataptr()),
+													static_cast<float*>(t[p2s_out].get_dataptr()),
+													frame_id);
+		return 0;
+	});
+	
 }
 
 void Multiplexer::
 _multiplexer(const int32_t * random_bits, const int32_t * data_bits, int32_t * out, const int frame_id)
 {
-	std::copy(random_bits, random_bits+this->N_code, out);
+	
 	for (size_t i = 0; i < this->positions.size(); i++)
 		out[positions[i]] = data_bits[i];
 }	
 
+void Multiplexer::
+_demultiplexer(const float * mux_sequence, float * good_bits, const int frame_id)
+{
+	
+	for (size_t i = 0; i < this->positions.size(); i++) {		
+		good_bits[i] = mux_sequence[positions[i]];
+	}
+}
