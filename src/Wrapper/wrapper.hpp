@@ -15,7 +15,8 @@
 
 #include "Module/Framer/Framer.hpp"
 #include "Module/Multiplexer/Multiplexer.hpp"
-#include "Module/Padder/Padder.hpp"
+#include "Module/Splitter/Splitter.hpp"
+//#include "Module/Padder/Padder.hpp"
 #include "Module/Feedbacker/Feedbacker.hpp"
 
 #include "Module/Scrambler/Scrambler.hpp"
