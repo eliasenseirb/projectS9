@@ -18,15 +18,15 @@ PYBIND11_MODULE(pyaf, m){
 
 	// Import AFF3CT module from py_AFF3CT
 	py::object py_aff3ct_module = (py::object) py::module_::import("py_aff3ct").attr("module").attr("Module");
-	/*
+	
 	py::module_ m_padder       = m.def_submodule("padder"      );
 	py::class_<aff3ct::module::Padder>(m_padder,"Padder", py_aff3ct_module)
 		.def(py::init<const int, const int>(), "init_size"_a, "final_size"_a);
-	*/
+	
 	py::module_ m_multiplexer       = m.def_submodule("multiplexer"      );
 	py::class_<aff3ct::module::Multiplexer>(m_multiplexer,"Multiplexer", py_aff3ct_module)
-		.def(py::init<const std::vector<int> &, const int>(), "positions"_a, "N_code"_a);
-	
+		.def(py::init<const std::vector<int> &, const int, const int>(), "positions"_a, "sec_sz"_a, "N_code"_a);
+		
 	py::module_ m_splitter = m.def_submodule("splitter");
 	py::class_<aff3ct::module::Splitter>(m_splitter, "Splitter", py_aff3ct_module)
 		.def(py::init<const std::vector<int> &, const size_t, const size_t>(), "input"_a, "img_size"_a, "frame_len"_a)
@@ -47,6 +47,9 @@ PYBIND11_MODULE(pyaf, m){
 		})
 		.def("get_frame_size", [](aff3ct::module::Splitter& self){
 			return self.get_frame_size();
+		})
+		.def("print_info", [](aff3ct::module::Splitter& self){
+			self.print_info();
 		});
 
 	py::module_ m_filter       = m.def_submodule("filter"      );

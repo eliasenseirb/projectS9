@@ -52,7 +52,10 @@ class Source:
         tab_dec=[]
         for i in range (size):
             height_bits=binary_sequence[i*8:(i+1)*8]
-            dec=int(''.join(str(x) for x in height_bits),2)
+            try:
+                dec=int(''.join(str(x) for x in height_bits),2)
+            except ValueError:
+                breakpoint()
             tab_dec.append(np.uint8(dec))
 
         # tab_dec = [np.uint8(x) for x in tab_dec]
