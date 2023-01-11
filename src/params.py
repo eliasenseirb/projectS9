@@ -21,6 +21,6 @@ class Bob(params):
 class Eve(params):
     def __init__(self, ebn0):
         super().__init__(ebn0)
-        self.ebn0 -= 3
+        self.ebn0 -= 12
         self.esn0 = self.ebn0 + 10*math.log10(self.K/self.N)
         self.sigma = 1/(math.sqrt(2)*10**(self.esn0/20))

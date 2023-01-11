@@ -6,15 +6,20 @@
  * This file is under MIT license (https://opensource.org/licenses/MIT).
  */
 
+#include <stdlib.h>
+#include <time.h>
 #include "Module/Multiplexer/Multiplexer.hpp"
 
 using namespace aff3ct;
 using namespace aff3ct::module;
 
+
+
 Multiplexer::
 Multiplexer(const std::vector<int> & positions, const int sec_sz, const int N_code)
 : Module(), positions(positions), sec_sz(sec_sz), N_code(N_code)
 {
+	srand((unsigned) time(NULL));
 	const std::string name = "Multiplexer";
 	this->set_name(name);
 	this->set_short_name(name);
@@ -47,7 +52,8 @@ Multiplexer(const std::vector<int> & positions, const int sec_sz, const int N_co
 void Multiplexer::
 _multiplexer(const int32_t * random_bits, const int32_t * data_bits, int32_t * out, const int frame_id)
 {
-	
+	for (int i = 0; i < this->N_code; i++)
+		out[i] = rand()%2;
 	for (size_t i = 0; i < this->positions.size(); i++)
 		out[this->positions[i]] = data_bits[i];
 }	

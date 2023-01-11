@@ -45,7 +45,7 @@ EVE = 1
 Simulation_type = EVE
 
 # -- PARAMETRES
-ebn0 = 4
+ebn0 = 24
 params_bob = Bob(ebn0)
 params_eve = Eve(ebn0)
 
@@ -90,6 +90,37 @@ def count(b: list[bool]):
 			cnt+=1
 	return cnt
 
+def get_secrecy_position(frozen_bits, information_bits):
+    """Trouve les positions dans la suite de K bits des
+    bits de confidentialite.
+
+    frozen_bits : list[bool] --> True si le bit est gele, False sinon
+    information_bits: list[bool] --> Position des bits de confidentialite dans la liste de N bits
+    """
+    
+    seq_ptr = 0
+    info_idx = 0
+    positions = []
+    for i in range(len(frozen_bits)):
+        if not frozen_bits[i]:
+            # A chaque fois qu'on trouve un bit d'information
+            # on avance dans la suite de K bits
+
+            # Si cette position se trouve dans le tableau de bits
+            # d'information, on la stocke
+            # /!\ On travaille sous l'hypothese que les deux tableaux
+            # sont tries
+            
+            print(f"{information_bits[info_idx]} vs {i}")
+            if information_bits[info_idx] == i:
+                positions.append(seq_ptr)
+                info_idx += 1
+            if info_idx == len(information_bits):
+                return positions
+            seq_ptr += 1
+
+    return positions
+
 
 img_rx = np.ndarray(shape=img_shape, dtype=np.uint8)
 
@@ -108,7 +139,7 @@ params_eve.frozen_bits = fbgen.generate()
 mux_bits, pos_mux_bits = all_no(params_bob.frozen_bits, params_eve.frozen_bits)
 params.sec_sz = count(mux_bits)
 
-to_remove = []
+"""to_remove = []
 for pos in pos_mux_bits:
     if pos > params.K:
         print(f"Position invalide {pos}!!!")
@@ -117,6 +148,15 @@ for pos in pos_mux_bits:
 for r in to_remove:
     pos_mux_bits.remove(r)
 cnt=  0
+"""
+
+seq_pos = get_secrecy_position(params_bob.frozen_bits, pos_mux_bits)
+
+for b in seq_pos:
+    print(b)
+
+
+
 """
 for i in range(params.N):
     if not mux_bits[i]:
@@ -128,7 +168,7 @@ print(cnt)
 # -- Source
 src_im = Source(img, params.sec_sz)
 src_rand = aff3ct.module.source.Source_random_fast(params.N, 12)
-src_rand2 = aff3ct.module.source.Source_random_fast(params.K, 12)
+src_rand2 = aff3ct.module.source.Source_random_fast(params.K, 24)
 
 # -- Splitter
 splt = Splitter(src_im.img_bin, len(src_im.img_bin), params.sec_sz)
@@ -140,10 +180,10 @@ pad = Padder(params.sec_sz, params.K)
 enc = aff3ct.module.encoder.Encoder_polar_sys(params.K, params.N, params_bob.frozen_bits)
 
 # -- multiplexer
-mux = Multiplexer(pos_mux_bits, count(mux_bits), params.K)
+mux = Multiplexer(seq_pos, count(mux_bits), params.K)
 
 # -- decoder
-dec = aff3ct.module.decoder.Decoder_polar_SC_naive_sys(params.K, params.N, params_bob.frozen_bits)
+dec = aff3ct.module.decoder.Decoder_polar_SC_naive_sys(params.K, params.N, params.frozen_bits)
 
 # -- modulator
 mdm = aff3ct.module.modem.Modem_BPSK_fast(params.N)
@@ -195,11 +235,13 @@ ax = plt.subplot(111)
 im = ax.imshow(img_rx, cmap='gist_gray')
 
 
+cnt = 0
 while True:
     #print("Loop")
     while not seq.is_done():
         seq.exec_step()
-
+    
+    
     src_im.bin2img(img_rx, splt.get_rx())
     # img_uint8 = format_img(img_rx, img_shape)
     mnt.reset()
@@ -208,7 +250,9 @@ while True:
     im.draw(fig.canvas.renderer)
     plt.pause(.01)
     #time.sleep(1)
-    
+    if cnt == 0:
+        breakpoint()
+        cnt = 1
     #breakpoint()
 
 """
