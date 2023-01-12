@@ -10,6 +10,7 @@ $ pip install -r requirements.txt
 
 ```bash
 AFF3CT_PATH #chemin vers le dossier py_aff3ct/build/lib
+PYAF_PATH   #chemin vers la librairie pyaf
 ```
 
 Ne **PAS** push le fichier *.env*
