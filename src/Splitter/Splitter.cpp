@@ -49,7 +49,6 @@ Splitter(const std::vector<int> & input, const size_t img_size, const size_t fra
 void Splitter::
 _splitter(int32_t * out, const size_t frame_id)
 {
-	std::cout << "splitter (" << this->tx_current_idx << ")" << std::endl;
 	for (size_t i = 0; i < this->frame_len; i++) {
 		// write data in the socket
 		out[i] = input[this->tx_current_idx++];
@@ -60,7 +59,6 @@ _splitter(int32_t * out, const size_t frame_id)
 void Splitter::
 _collect(int32_t * in, int32_t * through, const size_t frame_id)
 {
-	std::cout << "collect (" << this->rx_current_idx << ")" << std::endl;
 	for (size_t i = 0; i < this->frame_len ; i++) {
 		// read data from socket
 		this->buffer[this->rx_current_idx++] = in[i];
@@ -103,4 +101,10 @@ size_t Splitter::
 get_frame_size()
 {
 	return this->frame_len;
+}
+
+void Splitter::
+print_info()
+{
+	std::cout << "Buffer: " << &this->buffer << "\nInput: " << &this->input << std::endl;
 }

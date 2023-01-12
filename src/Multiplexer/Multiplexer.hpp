@@ -31,6 +31,7 @@ class Multiplexer : public Module
 
 protected:
 	std::vector<int> positions;
+	int sec_sz;
 	int N_code;
 
 
@@ -38,7 +39,7 @@ public:
 	/*!
 	 * \brief Constructor.
 	 */
-	Multiplexer(const std::vector<int> & positions, const int N_code);
+	Multiplexer(const std::vector<int> & positions, const int sec_sz, const int N_code);
 
 	/*!
 	 * \brief Destructor.
@@ -46,7 +47,8 @@ public:
 	virtual ~Multiplexer() = default;
 
 protected:
-	virtual void _multiplexer  (const int32_t * random_bits, const int32_t * data_bits, int32_t* out, const int frame_id);
+	virtual void _multiplexer   (const int32_t * random_bits, const int32_t * data_bits, int32_t* out, const int frame_id);
+	virtual void _demultiplexer (const int32_t * mux_sequence, int32_t * good_bits, const int frame_id);
 };
 }
 }
