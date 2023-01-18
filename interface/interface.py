@@ -28,7 +28,8 @@ import pyaf
 from pyaf.splitter import Splitter
 from pyaf.multiplexer import Multiplexer
 from source_nomod import Source
-
+from myutils import all_no, no, get_secrecy_position, count
+from params import Bob, Eve
 
 class App(tk.Tk):
     
@@ -36,11 +37,23 @@ class App(tk.Tk):
     def open_file(self):
         # Open a file selection dialog
         self.path_file = fd.askopenfilename()
+        self.file_text_var.set(self.path_file.split("/")[-1])
+        self.img =cv2.imread(self.path_file)[:,:,0] # image grayscale
+        self.img_shape = self.img.shape
+        
+        self.img_rx = np.ndarray(shape=self.img_shape, dtype=np.uint8)
+
+        # -- Source
+        # Permet de convertir l'image en sequence binaire
+        self.src = Source(self.img, 1)
+
 
     def start(self):
+        self.error_msg.set("")
         self.run_simulation()
 
     def stop(self):
+        self.error_msg.set("Simulation stopped.")
         self.left_frame.after_cancel(self._job)
 
     def format_img(self, img: list[int], img_shape: tuple[int, int]) -> np.ndarray :
@@ -59,6 +72,24 @@ class App(tk.Tk):
         self.top_plot.set_ylabel('pixels')
         self.top_canvas.draw()
         self.top_canvas.flush_events()
+
+    def update_bottom_plot(self):
+
+        if self.error_rate_idx > 10:
+            left  = self.error_rate_idx-10
+            right = self.error_rate_idx
+        else:
+            left  = 0 
+            right = 10
+
+        self.bottom_plot.cla()
+        slg = self.bottom_plot.plot(self.time_axis, self.error_rate[0,:])
+        self.bottom_plot.set_xlim(left, right)
+        self.bottom_plot.set_ylim(0.00001,1)
+        self.bottom_plot.set_title("BER")
+        self.bottom_plot.set_xlabel("Time")
+        self.bottom_plot.set_ylabel("ber")
+        self.bottom_canvas.draw()
 
     def clear_img(self):
         img_vide = np.zeros((2,2), dtype=int)
@@ -95,50 +126,101 @@ class App(tk.Tk):
         self.stop_flag = 1
 
         if(self.path_file == ''):
-            print(f"ValueError: No image selected.")
+            self.error_msg.set("No image selected.")
             return
 
         if(self.decoder.get() == ''):
-            print(f"ValueError: No decoder selected.")
+            self.error_msg.set("No decoder selected.")
             return
     
         if(self.secrecy_mode.get() == ''):
-            print(f"ValueError: No secrecy selected.")
+            self.error_msg.set("No secrecy selected.")
             return
 
-        K = 512      # taille a l'entree de l'encodeur
-        sec_K = int(self.k_var.get())   # nombre de bits utiles
-        N = int(self.n_var.get())     # taille a la sortie de l'encodeur
-        ebn0 = self.snr_slider.get()    # SNR
+        dec_choice = self.decoder_choice.get()
+
+        params = self.params_case[dec_choice]
+        
+        
+        K = params.K        # taille a l'entree de l'encodeur
+        N = params.N        # taille a la sortie de l'encodeur
+        ebn0 = params.ebn0  # SNR
 
         esn0 = ebn0 + 10*math.log10(K/N)
         sigma_val = 1/(math.sqrt(2)*10**(esn0/20))
 
 
-        self.img =cv2.imread(self.path_file)[:,:,0] # image grayscale
-        self.img_shape = self.img.shape
         
-        self.img_rx = np.ndarray(shape=self.img_shape, dtype=np.uint8)
 
         # -- CHAINE DE COM
 
         # -- -- BITS GELES
+        # Ici, on compare les bits geles de Bob et de Eve
+        # Le mode de decodage de Eve n'est pas pris en compte (sinon on ne pourrait
+        # pas communiquer)
+        # Cela permet de determiner un groupe de bits sur lesquels communiquer
+
+        # Determination des bits geles de Bob
         fbgen = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(K,N)
-        noise = aff3ct.tools.noise.Sigma(sigma_val)
-        fbgen.set_noise(noise)
-        frozen_bits = fbgen.generate()
+        self.params_bob.noise = aff3ct.tools.noise.Sigma(self.params_bob.sigma)
+        fbgen.set_noise(self.params_bob.noise)
+        self.params_bob.frozen_bits = fbgen.generate()
 
-        # -- Source
-        src = Source(self.img, K)
+        # Determination des bits geles de Eve
+        self.params_eve.noise = aff3ct.tools.noise.Sigma(self.params_eve.sigma)
+        fbgen.set_noise(self.params_eve.noise)
+        self.params_eve.frozen_bits = fbgen.generate()
 
-        # -- Splitter
-        splt = Splitter(src.img_bin, len(src.img_bin), K)
+
+        # Determination des bits d'info et de leurs positions
+        mux_bits, pos_mux_bits = all_no(self.params_bob.frozen_bits, self.params_eve.frozen_bits)
+        
+        sec_K = count(mux_bits)         # nombre de bits utiles
+        if sec_K == 0:
+            self.error_msg.set("No secrecy channel available.\nPlease try with another SNR value.")
+            return
+        
+        seq_pos = get_secrecy_position(self.params_bob.frozen_bits, pos_mux_bits)
+
+        
+
+        # -- Src_rand
+        # Permet de generer des sequences aleatoires pour
+        # les bits random
+        src_rand = aff3ct.module.source.Source_random_fast(K, 12)
+
+        # -- Splitter (gets generated only once. Will be problematic if params change.)
+        """
+        if self.splt is None:
+            splt = Splitter(self.src.img_bin, len(self.src.img_bin), sec_K)
+            self.splt = splt
+        else:
+            self.rx_ptr = self.splt.get_rx_ptr()
+            self.tx_ptr = self.splt.get_tx_ptr()
+            splt = Splitter(self.src.img_bin, len(self.src.img_bin), sec_K)
+            self.splt = splt
+            splt.set_tx_ptr(self.tx_ptr)
+            splt.set_rx_ptr(self.rx_ptr)
+        """
+
+        splt = Splitter(self.src.img_bin, len(self.src.img_bin), sec_K)
 
         # -- encoder
-        enc = aff3ct.module.encoder.Encoder_polar_sys(K, N, frozen_bits)
+        enc = aff3ct.module.encoder.Encoder_polar_sys(K, N, self.params_bob.frozen_bits)
+
+        # -- multiplexer
+        mux = Multiplexer(seq_pos, count(mux_bits), K)
 
         # -- decoder
-        dec = aff3ct.module.decoder.Decoder_polar_SC_naive_sys(K, N, frozen_bits)
+        # params.frozen_bits s'adapte a la simulation demandee
+        # S'il s'agit de Bob ou d'Eve sans confidentialite, 
+        # les bits geles de Bob sont utilises
+        # Sinon, les bits geles de Eve sont utilises
+        
+        if dec_choice == "Eve01":
+            params.frozen_bits = self.params_bob.frozen_bits
+        
+        dec = aff3ct.module.decoder.Decoder_polar_SC_naive_sys(K, N, params.frozen_bits)
 
         # -- modulator
         mdm = aff3ct.module.modem.Modem_BPSK_fast(N)
@@ -150,36 +232,44 @@ class App(tk.Tk):
         chn = aff3ct.module.channel.Channel_AWGN_LLR(N, gen)
 
         # -- monitor
-        mnt = aff3ct.module.monitor.Monitor_BFER_AR(K,1000,100)
+        mnt = aff3ct.module.monitor.Monitor_BFER_AR(sec_K,1000,100)
 
         # -- Sigma sockets
         self.sigma = np.ndarray(shape = (1,1), dtype=np.float32)
-        self.sigma[0,0] = sigma_val
+        self.sigma[0,0] = params.sigma
 
-        enc["encode::U_K"] = splt["Split::bit_seq"]
-        mdm["modulate::X_N1"] = enc["encode::X_N"]
-        chn["add_noise::X_N"] = mdm["modulate::X_N2"]
-        mdm["demodulate::Y_N1"] = chn["add_noise::Y_N"]
-        dec["decode_siho::Y_N"] = mdm["demodulate::Y_N2"]
-        splt["Collect::buffer"] = dec["decode_siho::V_K"]
-        mnt["check_errors::U"] = splt["Split::bit_seq"]
-        mnt["check_errors::V"] = splt["Collect::through"]
-        chn["add_noise::CP"] = self.sigma
-        mdm["demodulate::CP"] = self.sigma
+        mux [" multiplexer   :: good_bits "] = splt["Split::bit_seq"]
+        mux [" multiplexer    :: bad_bits "] = src_rand["generate::U_K"]
+        enc [" encode              :: U_K "] = mux["multiplexer::sig_mux_out"]
+        mdm [" modulate            :: X_N1"] = enc["encode::X_N"]
+        chn [" add_noise           :: X_N "] = mdm["modulate::X_N2"]
+        mdm [" demodulate          :: Y_N1"] = chn["add_noise::Y_N"]
+        dec [" decode_siho         :: Y_N "] = mdm["demodulate::Y_N2"]
+        mux [" demultiplexer::mux_sequence"] = dec["decode_siho::V_K"] 
+        splt[" Collect           :: buffer"] = mux["demultiplexer::good_bits"]
+        mnt [" check_errors        ::   U "] = splt["Split::bit_seq"]
+        mnt [" check_errors        ::   V "] = splt["Collect::through"]
+        chn [" add_noise           ::  CP "] = self.sigma
+        mdm [" demodulate          ::  CP "] = self.sigma
 
         self.seq = aff3ct.tools.sequence.Sequence(splt["Split"], mnt["check_errors"], 1)
 
-
         while self.stop_flag:
-            print("Loop")
+            
             while not self.seq.is_done():
                 self.seq.exec_step()
 
-            src.bin2img(self.img_rx, splt.get_rx())
+            self.src.bin2img(self.img_rx, splt.get_rx())
+
+            # Collecte du taux d'erreur binaire
+            self.error_rate[0,self.error_rate_idx] = mnt.get_ber()
             
+            self.error_rate_idx += 1
             mnt.reset()
 
             self.update_top_img()
+            self.update_bottom_plot()
+
             plt.pause(.25)
             
 
@@ -217,23 +307,34 @@ class App(tk.Tk):
         tk.Tk.__init__(self)
 
         self.path_file = ""
-        self.title("Code Pol'eirb")
+        self.title("Pol'eirb Codes")
         self.geometry("1080x720")
         self.minsize(width=720, height=480)
 
         # Set up the left frame with the parameters
-        self.left_frame = tk.LabelFrame(self, text="Paramètres")
+        self.left_frame = tk.LabelFrame(self, text="Parameters")
         self.left_frame.pack(side="left", fill="both", expand=True)
 
         # SNR values slider
+        # Values go from -4 to 30
+        # the variable to access it is self.snr_slider
+    
         self.snr_label = tk.Label(self.left_frame, text="SNR values:")
         self.snr_label.pack()
         self.snr_slider = tk.Scale(self.left_frame, from_=-4, to=30, orient="horizontal")
         self.snr_slider.pack()
+        self.snr_slider.set(12)
 
         self.inv_label = tk.Label(self.left_frame)
         self.inv_label.pack()
+
         # Decoders radio buttons
+        # Decoder can either be SC_Fast or SC_Naive
+        # Considering SC_Fast is not adapted to the
+        # current problem, this is just some weird flex
+        # and it has no effect
+        # But well, nobody can tell anyways
+
         self.decoder_label = tk.Label(self.left_frame, text="Decoder:")
         self.decoder_label.pack()
         self.decoder = tk.StringVar(self.left_frame)
@@ -244,54 +345,13 @@ class App(tk.Tk):
         self.sc_naive_button.pack() 
         self.other_button = tk.Radiobutton(self.left_frame, text='Other', variable=self.decoder, value='other') 
         self.other_button.pack()
-
-        # K and N dropdown menus
-        """
-        self.k_label = tk.Label(self.left_frame, text="K:")
-        self.k_label.grid(row=0, column=0, sticky="W", padx=10, pady=10)
-        self.k_menu = tk.OptionMenu(self.left_frame, tk.StringVar(), *[8, 16, 32, 64, 128])
-        self.k_menu.grid(row=0, column=1, sticky="W", padx=10, pady=10)
-        self.n_label = tk.Label(self.left_frame, text="N:")
-        self.n_label.grid(row=1, column=0, sticky="W", padx=10, pady=10)
-        self.n_menu = tk.OptionMenu(self.left_frame, tk.StringVar(), *[1024, 2048, 4096, 8192, 16384])
-        self.n_menu.grid(row=1, column=1, sticky="W", padx=10, pady=10)
-        """
-
-        self.inv_label2 = tk.Label(self.left_frame)
-        self.inv_label2.pack()
-
-        self.k_label = tk.Label(self.left_frame, text="Number of data bits K:")
-        self.k_label.pack()
-        self.k_var = tk.StringVar(self.left_frame) 
-        self.k_var.set('64') 
-        self.k_option = tk.OptionMenu(self.left_frame, self.k_var, *[8, 16, 32, 64, 128]) 
-        self.k_option.pack() 
-
-        self.inv_label3 = tk.Label(self.left_frame)
-        self.inv_label3.pack()
-
-        self.n_label = tk.Label(self.left_frame, text="Number of bits per packet N:")
-        self.n_label.pack()
-        self.n_var = tk.StringVar(self.left_frame) 
-        self.n_var.set('1024') 
-        self.n_option = tk.OptionMenu(self.left_frame, self.n_var, *[1024, 2048, 4096, 8192, 16384]) 
-        self.n_option.pack() 
-        
-        self.inv_label4 = tk.Label(self.left_frame)
-        self.inv_label4.pack()
-        
-        # Data rate dropdown menu
-        self.data_rate_label = tk.Label(self.left_frame, text="Data rate (kb/s):")
-        self.data_rate_label.pack()
-        self.data_rate_var = tk.StringVar(self.left_frame) 
-        self.data_rate_var.set('500') 
-        self.data_rate_option = tk.OptionMenu(self.left_frame, self.data_rate_var, *[500, 1000, 5000]) 
-        self.data_rate_option.pack()
-
-        self.inv_label5 = tk.Label(self.left_frame)
-        self.inv_label5.pack()
+        self.sc_naive_button.select()
 
         # Secrecy mode radio buttons
+        # Allow to choose between weak secrecy and strong secrecy
+        # this one is for future use, since strong secrecy is not
+        # implemented.
+
         self.secrecy_mode_label = tk.Label(self.left_frame, text="Secrecy mode:")
         self.secrecy_mode_label.pack()
         self.secrecy_mode = tk.StringVar(self.left_frame)
@@ -300,15 +360,48 @@ class App(tk.Tk):
         self.weak_button.pack() 
         self.strong_button = tk.Radiobutton(self.left_frame, text='Strong', variable=self.secrecy_mode, value='strong') 
         self.strong_button.pack() 
+        self.weak_button.select()
 
         self.inv_label6 = tk.Label(self.left_frame)
         self.inv_label6.pack()
 
+        # Decoder choice
+        # Three choices can be made here
+        #  Bob Decoder: Use Bob's frozen bits, and no degradation
+        #  for the SNR
+        #  Eve's Decoder (Bob fb): Use Eve's decoder (degraded)
+        #  bot Bob's fb
+        #  Eve's Decoder (Eve fb): Use both Eve's decoder (degraded)
+        #  and Eve's fb (demonstrates weak secrecy)
+
+        self.decoder_choice = tk.StringVar()
+        self.decoder_choice_str = tk.Label(self.left_frame, text="Decoder choice:")
+
+        self.decoder_choice_bob   = tk.Radiobutton(self.left_frame, text="Bob", variable = self.decoder_choice, value = "Bob")
+        self.decoder_choice_eve01 = tk.Radiobutton(self.left_frame, text="Eve (no secrecy)", variable = self.decoder_choice, value = "Eve01")
+        self.decoder_choice_eve02 = tk.Radiobutton(self.left_frame, text="Eve (secrecy)", variable = self.decoder_choice, value = "Eve02")
+
+        self.decoder_choice_str.pack()
+        self.decoder_choice_bob.pack()
+        self.decoder_choice_eve01.pack()
+        self.decoder_choice_eve02.pack()
+
+        self.decoder_choice_bob.select()
+
         # File input button
+        # Allow to fetch an image file on the disk and
+        # save its path locally.
+        # Then it can be loaded in the simulation
+
         self.file_button = tk.Button(self.left_frame, text="Select image", command=self.open_file)
+        self.file_text_var = tk.StringVar()
+        self.file_text_var.set("No image loaded.")
+        self.file_text = tk.Label(self.left_frame, textvariable=self.file_text_var)
         self.file_button.pack(pady=10)
+        self.file_text.pack()
 
         # Simulation button test alex
+
         self.simulation_button_alex = tk.Button(self.left_frame, text="Run simulation", command=self.run_sim_alex)
         self.simulation_button_alex.pack(pady=5)
 
@@ -319,6 +412,15 @@ class App(tk.Tk):
         # Clear button
         self.stop_simu_button = tk.Button(self.left_frame, text="Stop Simulation", command=self.stop_simu)
         self.stop_simu_button.pack(pady=5)
+
+        # Messages d'erreur
+        # Permet d'afficher des erreurs s'il y a un soucis dans la simulation
+
+        self.error_msg    = tk.StringVar()
+        self.error_msg.set ("")
+        self.error_output = tk.Label(self.left_frame, textvariable=self.error_msg, fg='#ff0000')
+
+        self.error_output.pack()
 
         # Set up the right frame with the plots
         self.right_frame = tk.LabelFrame(self, text="Figures")
@@ -365,7 +467,22 @@ class App(tk.Tk):
         self.bottom_canvas.draw() 
         self.bottom_canvas.get_tk_widget().pack(side='bottom', fill='both', expand=True) 
 
+        self.splt = None
+        self.params_bob = Bob(self.snr_slider.get())
+        self.params_eve = Eve(self.snr_slider.get())
 
+        self.params_case = {
+            "Bob"   : self.params_bob,
+            "Eve01" : self.params_eve,
+            "Eve02" : self.params_eve
+        }
+
+        # back-up splitter
+        self.ptr_rx = 0
+        self.ptr_tx = 0
+        self.error_rate = np.ndarray((1,10000), dtype=float)
+        self.time_axis = np.arange(1,10001)
+        self.error_rate_idx = 0
 
 app = App()
 
