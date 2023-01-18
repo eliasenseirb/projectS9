@@ -36,6 +36,7 @@ import pyaf
 from pyaf.splitter import Splitter
 from pyaf.multiplexer import Multiplexer
 from pyaf.padder import Padder
+
 from source_nomod import Source
 from params import Bob, Eve
 
@@ -45,7 +46,7 @@ EVE = 1
 Simulation_type = EVE
 
 # -- PARAMETRES
-ebn0 = 24
+ebn0 = 12
 params_bob = Bob(ebn0)
 params_eve = Eve(ebn0)
 
@@ -57,6 +58,87 @@ else:
 
 img =cv2.imread("img/oeil_gris.jpg")[:,:,0] # image grayscale
 img_shape = img.shape
+
+
+def convert_frozen_bits(frozen_bits):
+    # representation
+    blue  = [0, 0.44, 0.74]
+    green = [1, 1, 0.13]
+
+    bits = np.ndarray((len(frozen_bits),40,3))
+    for i, bit in enumerate(frozen_bits):
+        if bit:
+            bits[i,:] = blue
+        else:
+            bits[i,:] = green
+
+    return bits
+
+def display_frozen_bits(frozen_bits):
+    
+    bits = convert_frozen_bits(frozen_bits)
+
+    plt.figure()
+    
+    plt.imshow(bits)
+    plt.title("Frozen bits of the polar code")
+    return bits
+
+def display_common_frozen_bits(bob_frozen_bits, eve_frozen_bits):
+    blue  = [0, 0.44, 0.74]  # frozen bits
+    green = [1, 1, 0.13] # bob information bits
+    red   = [0.85, 0.33, 0.1]  # common bits (random)
+
+    joint_bits = np.ndarray((len(bob_frozen_bits), 40, 3))
+
+    bob_bits = convert_frozen_bits(bob_frozen_bits)
+    eve_bits = convert_frozen_bits(eve_frozen_bits)
+
+    for i, bit in enumerate(bob_frozen_bits):
+        if bit: # frozen bit anyway
+            joint_bits[i,:] = blue
+        else:
+            if eve_frozen_bits[i]: # information bit
+                joint_bits[i,:] = green
+            else:
+                joint_bits[i,:] = red
+
+    plt.figure()
+    
+    
+    plt.subplot(131)
+    
+    plt.imshow(bob_bits)
+    plt.axis('off') 
+
+    plt.subplot(132)
+    plt.imshow(eve_bits)
+    plt.axis('off')
+
+    plt.subplot(133)
+    plt.imshow(joint_bits)
+    plt.axis('off')
+
+    plt.figure()
+    plt.imshow(bob_bits)
+    plt.axis('off')
+    plt.savefig('bob.png', format='png', bbox_inches='tight')
+    plt.close()
+
+    plt.figure()
+    plt.imshow(eve_bits)
+    plt.axis('off')
+    plt.savefig('eve.png', format='png', bbox_inches='tight')
+    plt.close()
+
+    plt.figure()
+    plt.imshow(joint_bits)
+    plt.axis('off')
+    plt.savefig('joint.png', format='png', bbox_inches='tight')
+    plt.close()
+
+
+
 
 def format_img(img: list[int], img_shape: tuple[int, int]) -> np.ndarray :
     """Transforme une liste d'entiers en tableau numpy d'uint8"""
@@ -97,7 +179,8 @@ def get_secrecy_position(frozen_bits, information_bits):
     frozen_bits : list[bool] --> True si le bit est gele, False sinon
     information_bits: list[bool] --> Position des bits de confidentialite dans la liste de N bits
     """
-    
+    if information_bits == []:
+        raise ValueError("No bits available for secrecy with this combination of EbN0 and penalty for Eve.")
     seq_ptr = 0
     info_idx = 0
     positions = []
@@ -138,6 +221,9 @@ params_eve.frozen_bits = fbgen.generate()
 
 mux_bits, pos_mux_bits = all_no(params_bob.frozen_bits, params_eve.frozen_bits)
 params.sec_sz = count(mux_bits)
+
+# display_common_frozen_bits(params_bob.frozen_bits, params_eve.frozen_bits)
+
 
 """to_remove = []
 for pos in pos_mux_bits:
@@ -183,7 +269,7 @@ enc = aff3ct.module.encoder.Encoder_polar_sys(params.K, params.N, params_bob.fro
 mux = Multiplexer(seq_pos, count(mux_bits), params.K)
 
 # -- decoder
-dec = aff3ct.module.decoder.Decoder_polar_SC_naive_sys(params.K, params.N, params.frozen_bits)
+dec = aff3ct.module.decoder.Decoder_polar_SC_naive_sys(params.K, params.N, params_bob.frozen_bits)
 
 # -- modulator
 mdm = aff3ct.module.modem.Modem_BPSK_fast(params.N)
@@ -201,25 +287,24 @@ mnt = aff3ct.module.monitor.Monitor_BFER_AR(params.sec_sz,1000,100)
 sigma = np.ndarray(shape = (1,1), dtype=np.float32)
 sigma[0,0] = params.sigma
 
+
 mux["multiplexer::good_bits"] = splt["Split::bit_seq"]
 mux["multiplexer::bad_bits"] = src_rand2["generate::U_K"]
-#pad["padder::good_bits"] = mux["multiplexer::sig_mux_out"]
-#pad["padder::rand_bits"] = src_rand2["generate::U_K"]
-#enc["encode::U_K"] = pad["padder::sig_pad_out"]
 enc["encode::U_K"] = mux["multiplexer::sig_mux_out"]
 mdm["modulate::X_N1"] = enc["encode::X_N"]
 chn["add_noise::X_N"] = mdm["modulate::X_N2"]
 mdm["demodulate::Y_N1"] = chn["add_noise::Y_N"]
 dec["decode_siho::Y_N"]  = mdm["demodulate::Y_N2"]
 mux["demultiplexer::mux_sequence"] = dec["decode_siho::V_K"] 
-#pad["unpadder::pad_sequence"] = pad["unpadder::good_bits"]
 splt["Collect::buffer"] = mux["demultiplexer::good_bits"]
 mnt["check_errors::U"] = splt["Split::bit_seq"]
 mnt["check_errors::V"] = splt["Collect::through"]
 chn["add_noise::CP"] = sigma
 mdm["demodulate::CP"] = sigma
 
-seq = aff3ct.tools.sequence.Sequence(splt["Split"], mnt["check_errors"], 1)
+seq = aff3ct.tools.sequence.Sequence(splt["Split"] , mnt["check_errors"], 1)
+
+seq.export_dot("demonstrateur.dot")
 
 """
 for lt in seq.get_tasks_per_types():
@@ -234,7 +319,6 @@ fig.canvas.draw()
 ax = plt.subplot(111)
 im = ax.imshow(img_rx, cmap='gist_gray')
 
-
 cnt = 0
 while True:
     #print("Loop")
@@ -246,8 +330,12 @@ while True:
     # img_uint8 = format_img(img_rx, img_shape)
     mnt.reset()
     im.set_data(img_rx)
-    
+    #print(np.squeeze(mutinf))
+        
     im.draw(fig.canvas.renderer)
+    
+    fig.canvas.flush_events()
+    
     plt.pause(.01)
     #time.sleep(1)
     if cnt == 0:
