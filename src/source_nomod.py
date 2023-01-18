@@ -61,7 +61,7 @@ class Source:
         # tab_dec = [np.uint8(x) for x in tab_dec]
         tab_dec=np.asarray(tab_dec)
         
-        img[:,:]=tab_dec.reshape([150,150])
+        img[:,:]=tab_dec.reshape([self.img_sz[0],self.img_sz[1] ])
         return 0
 
 
@@ -99,8 +99,10 @@ class Source:
         
         self.name = "source"    # Set your module's name
         self.img    = img       # image a lire
+        
         self.img_bin = self.img2bin()
         self.sec_sz = secrecy_K # nb de bits confidentiels
         self.img_sz = img.shape # taille de l'image
+        
         self.ptr_tx = 0         # pointeur dans la sequence a lire
         self.ptx_rx = 0         # pointeur dans la sequence recue 
