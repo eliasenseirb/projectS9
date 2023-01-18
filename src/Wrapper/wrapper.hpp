@@ -17,8 +17,6 @@
 #include "Module/Multiplexer/Multiplexer.hpp"
 #include "Module/Splitter/Splitter.hpp"
 #include "Module/Padder/Padder.hpp"
-#include "Module/MutualInformation/MutualInformation.hpp"
-#include "Module/SlidingWindow/SlidingWindow.hpp"
 #include "Module/Feedbacker/Feedbacker.hpp"
 
 #include "Module/Scrambler/Scrambler.hpp"
