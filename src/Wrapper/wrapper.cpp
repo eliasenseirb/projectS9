@@ -50,8 +50,16 @@ PYBIND11_MODULE(pyaf, m){
 		})
 		.def("print_info", [](aff3ct::module::Splitter& self){
 			self.print_info();
+		})
+		.def("set_rx_ptr", [](aff3ct::module::Splitter& self, const size_t new_value){
+			self.set_rx_ptr(new_value);
+		})
+		.def("set_tx_ptr", [](aff3ct::module::Splitter& self, const size_t new_value){
+			self.set_tx_ptr(new_value);
 		});
 
+	
+	
 	py::module_ m_filter       = m.def_submodule("filter"      );
 
 	// Bind a custom class, here is the binding for the "aff3ct::module::Filter<float>" class.

@@ -108,3 +108,15 @@ print_info()
 {
 	std::cout << "Buffer: " << &this->buffer << "\nInput: " << &this->input << std::endl;
 }
+
+void Splitter::
+set_tx_ptr(const size_t new_value)
+{
+	this->tx_current_idx = new_value;
+}
+
+void Splitter::
+set_rx_ptr(const size_t new_value)
+{
+	this->rx_current_idx = new_value;
+}
