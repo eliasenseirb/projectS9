@@ -142,7 +142,7 @@ class App(tk.Tk):
         params = self.params_case[dec_choice]
         
         
-        K = params.K        # taille a l'entree de l'encodeur
+        K = self.params_bob.K        # taille a l'entree de l'encodeur
         N = params.N        # taille a la sortie de l'encodeur
         ebn0 = params.ebn0  # SNR
 
@@ -161,21 +161,24 @@ class App(tk.Tk):
         # Cela permet de determiner un groupe de bits sur lesquels communiquer
 
         # Determination des bits geles de Bob
-        fbgen = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(K,N)
+        fbgen_bob = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(self.params_bob.K,self.params_bob.N)
         self.params_bob.noise = aff3ct.tools.noise.Sigma(self.params_bob.sigma)
-        fbgen.set_noise(self.params_bob.noise)
-        self.params_bob.frozen_bits = fbgen.generate()
+        fbgen_bob.set_noise(self.params_bob.noise)
+        self.params_bob.frozen_bits = fbgen_bob.generate()
 
         # Determination des bits geles de Eve
+        fbgen_eve = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(self.params_eve.K,self.params_eve.N)
         self.params_eve.noise = aff3ct.tools.noise.Sigma(self.params_eve.sigma)
-        fbgen.set_noise(self.params_eve.noise)
-        self.params_eve.frozen_bits = fbgen.generate()
+        fbgen_eve.set_noise(self.params_eve.noise)
+        self.params_eve.frozen_bits = fbgen_eve.generate()
 
 
         # Determination des bits d'info et de leurs positions
         mux_bits, pos_mux_bits = all_no(self.params_bob.frozen_bits, self.params_eve.frozen_bits)
         
         sec_K = count(mux_bits)         # nombre de bits utiles
+        
+        self.error_msg.set(f"Bits confidentiels: {sec_K}")
         if sec_K == 0:
             self.error_msg.set("No secrecy channel available.\nPlease try with another SNR value.")
             return
@@ -187,7 +190,7 @@ class App(tk.Tk):
         # -- Src_rand
         # Permet de generer des sequences aleatoires pour
         # les bits random
-        src_rand = aff3ct.module.source.Source_random_fast(K, 12)
+        src_rand = aff3ct.module.source.Source_random_fast(self.params_bob.K, 12)
 
         # -- Splitter (gets generated only once. Will be problematic if params change.)
         """
@@ -206,11 +209,16 @@ class App(tk.Tk):
         splt = Splitter(self.src.img_bin, len(self.src.img_bin), sec_K)
 
         # -- encoder
-        enc = aff3ct.module.encoder.Encoder_polar_sys(K, N, self.params_bob.frozen_bits)
+        enc = aff3ct.module.encoder.Encoder_polar_sys(self.params_bob.K, self.params_bob.N, self.params_bob.frozen_bits)
 
         # -- multiplexer
-        mux = Multiplexer(seq_pos, count(mux_bits), K)
+        mux_bob = Multiplexer(seq_pos, count(mux_bits), self.params_bob.K)
+        mux_eve = Multiplexer(seq_pos, count(mux_bits), self.params_eve.K)
 
+        if dec_choice == "Bob":
+            mux = mux_bob
+        else:
+            mux = mux_eve
         # -- decoder
         # params.frozen_bits s'adapte a la simulation demandee
         # S'il s'agit de Bob ou d'Eve sans confidentialite, 
@@ -220,7 +228,7 @@ class App(tk.Tk):
         if dec_choice == "Eve01":
             params.frozen_bits = self.params_bob.frozen_bits
         
-        dec = aff3ct.module.decoder.Decoder_polar_SC_naive_sys(K, N, params.frozen_bits)
+        dec = aff3ct.module.decoder.Decoder_polar_SC_naive_sys(params.K, self.params_bob.N, params.frozen_bits)
 
         # -- modulator
         mdm = aff3ct.module.modem.Modem_BPSK_fast(N)
@@ -238,9 +246,9 @@ class App(tk.Tk):
         self.sigma = np.ndarray(shape = (1,1), dtype=np.float32)
         self.sigma[0,0] = params.sigma
 
-        mux [" multiplexer   :: good_bits "] = splt["Split::bit_seq"]
-        mux [" multiplexer    :: bad_bits "] = src_rand["generate::U_K"]
-        enc [" encode              :: U_K "] = mux["multiplexer::sig_mux_out"]
+        mux_bob [" multiplexer   :: good_bits "] = splt["Split::bit_seq"]
+        mux_bob [" multiplexer    :: bad_bits "] = src_rand["generate::U_K"]
+        enc [" encode              :: U_K "] = mux_bob["multiplexer::sig_mux_out"]
         mdm [" modulate            :: X_N1"] = enc["encode::X_N"]
         chn [" add_noise           :: X_N "] = mdm["modulate::X_N2"]
         mdm [" demodulate          :: Y_N1"] = chn["add_noise::Y_N"]
