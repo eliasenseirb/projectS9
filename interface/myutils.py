@@ -5,7 +5,7 @@ position
 
 """
 
-def all_no(bits_Bob: list[bool], bits_Eve: list[bool]):
+def all_no(bits_Bob, bits_Eve):
 	"""Fait une liste complete des bits sur lesquels ne pas envoyer"""
 	out = [False for i in range(len(bits_Bob))]
 	pos = []
@@ -19,7 +19,7 @@ def no(b1: bool, b2: bool):
 	"""Trie les bits sur lesquels il ne faut pas envoyer"""
 	return (not b1) and b2
 
-def count(b: list[bool]):
+def count(b):
 	"""Compte les True dans une liste"""
 	cnt = 0
 	for bol in b:

@@ -20,14 +20,14 @@ from threaded_sequence import threaded_sequence
 import numpy as np
 import time
 import matplotlib.pyplot as plt
-from Modules.Mod_MUX import py_MUX 
+from pyaf.multiplexer import Multiplexer
 from Modules.padder import Padder
 
 
 MODCOD     = "QPSK-S_8/9"
 n_frames   = 1
 path = "./text.txt"
-Fs = 8e6
+Fs = 1e6
 Fc = 868e6
 
 dvs2_factory = dvbs2_factory(MODCOD,file_path= path, n_frames=n_frames)
@@ -150,8 +150,10 @@ frozen_bits = fbgen.generate()
 
 
 good_bits = get_good_bits(frozen_bits)
-mux = py_MUX(good_bits[0:8], K)
-mux2 = pyaf.multiplexer.Multiplexer(good_bits[0:8], K)
+
+
+mux2 = pyaf.multiplexer.Multiplexer(good_bits[0:8], 8, K)
+        
 enc = aff3ct.module.encoder.Encoder_polar_sys(K,N,frozen_bits)
 mdm = aff3ct.module.modem.Modem_BPSK_fast(p)
 padder = Padder(sz_in[1], sz_out[1])
@@ -176,13 +178,14 @@ rad   [       "send::X_N1"] = gain["imultiply::Z_N"]
 
 sequence = threaded_sequence([source["generate"],bad_bits_src["generate"],pad_src["generate"]],1) # py_aff3ct.tools.sequence.Sequence
 sequence.export_dot("test.dot")
+"""
 for lt in sequence.get_tasks_per_types():
     for t in lt:
         t.stats = True
-        # t.debug = True
-        # t.set_debug_precision(8)
-        # t.set_debug_limit(10)
-        
+        t.debug = True
+        t.set_debug_precision(8)
+        t.set_debug_limit(10)
+   """     
 sequence.start()
 initial_time = time.time()
 while sequence.is_alive():

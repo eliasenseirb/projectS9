@@ -11,6 +11,11 @@ class params:
         self.noise = None # temporaire
         self.sec_sz = 0
         self.window_size = 20
+        self.Fs = 1e6
+        self.Fc = 868e6
+        self.n_frames =1
+        self.MODCOD = "QPSK-S_8/9"
+        self.p = 16200
 
 class Bob(params):
     def __init__(self, ebn0):
