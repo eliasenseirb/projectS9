@@ -30,6 +30,7 @@ from pyaf.multiplexer import Multiplexer
 from source_nomod import Source
 from myutils import all_no, no, get_secrecy_position, count
 from params import Bob, Eve
+from sim import Sim
 
 class App(tk.Tk):
     
@@ -85,10 +86,10 @@ class App(tk.Tk):
         self.bottom_plot.cla()
         slg = self.bottom_plot.plot(self.time_axis, self.error_rate[0,:])
         self.bottom_plot.set_xlim(left, right)
-        self.bottom_plot.set_ylim(0.00001,1)
-        self.bottom_plot.set_title("BER")
+        self.bottom_plot.set_ylim(-0.1, 1.1)
+        self.bottom_plot.set_title("Mutual information")
         self.bottom_plot.set_xlabel("Time")
-        self.bottom_plot.set_ylabel("ber")
+        self.bottom_plot.set_ylabel("I(X;Y)")
         self.bottom_canvas.draw()
 
     def clear_img(self):
@@ -139,141 +140,27 @@ class App(tk.Tk):
 
         dec_choice = self.decoder_choice.get()
 
-        params = self.params_case[dec_choice]
+        sim = Sim(self.src.img_bin, decoder=dec_choice)
+
+        self.seq = sim.sequence 
+
+        for lt in self.seq.get_tasks_per_types():
+            for t in lt:
+                t.debug = True
+                t.set_debug_limit(10)
         
-        
-        K = self.params_bob.K        # taille a l'entree de l'encodeur
-        N = params.N        # taille a la sortie de l'encodeur
-        ebn0 = params.ebn0  # SNR
-
-        esn0 = ebn0 + 10*math.log10(K/N)
-        sigma_val = 1/(math.sqrt(2)*10**(esn0/20))
-
-
-        
-
-        # -- CHAINE DE COM
-
-        # -- -- BITS GELES
-        # Ici, on compare les bits geles de Bob et de Eve
-        # Le mode de decodage de Eve n'est pas pris en compte (sinon on ne pourrait
-        # pas communiquer)
-        # Cela permet de determiner un groupe de bits sur lesquels communiquer
-
-        # Determination des bits geles de Bob
-        fbgen_bob = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(self.params_bob.K,self.params_bob.N)
-        self.params_bob.noise = aff3ct.tools.noise.Sigma(self.params_bob.sigma)
-        fbgen_bob.set_noise(self.params_bob.noise)
-        self.params_bob.frozen_bits = fbgen_bob.generate()
-
-        # Determination des bits geles de Eve
-        fbgen_eve = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(self.params_eve.K,self.params_eve.N)
-        self.params_eve.noise = aff3ct.tools.noise.Sigma(self.params_eve.sigma)
-        fbgen_eve.set_noise(self.params_eve.noise)
-        self.params_eve.frozen_bits = fbgen_eve.generate()
-
-
-        # Determination des bits d'info et de leurs positions
-        mux_bits, pos_mux_bits = all_no(self.params_bob.frozen_bits, self.params_eve.frozen_bits)
-        
-        sec_K = count(mux_bits)         # nombre de bits utiles
-        
-        self.error_msg.set(f"Bits confidentiels: {sec_K}")
-        if sec_K == 0:
-            self.error_msg.set("No secrecy channel available.\nPlease try with another SNR value.")
-            return
-        
-        seq_pos = get_secrecy_position(self.params_bob.frozen_bits, pos_mux_bits)
-
-        
-
-        # -- Src_rand
-        # Permet de generer des sequences aleatoires pour
-        # les bits random
-        src_rand = aff3ct.module.source.Source_random_fast(self.params_bob.K, 12)
-
-        # -- Splitter (gets generated only once. Will be problematic if params change.)
-        """
-        if self.splt is None:
-            splt = Splitter(self.src.img_bin, len(self.src.img_bin), sec_K)
-            self.splt = splt
-        else:
-            self.rx_ptr = self.splt.get_rx_ptr()
-            self.tx_ptr = self.splt.get_tx_ptr()
-            splt = Splitter(self.src.img_bin, len(self.src.img_bin), sec_K)
-            self.splt = splt
-            splt.set_tx_ptr(self.tx_ptr)
-            splt.set_rx_ptr(self.rx_ptr)
-        """
-
-        splt = Splitter(self.src.img_bin, len(self.src.img_bin), sec_K)
-
-        # -- encoder
-        enc = aff3ct.module.encoder.Encoder_polar_sys(self.params_bob.K, self.params_bob.N, self.params_bob.frozen_bits)
-
-        # -- multiplexer
-        mux_bob = Multiplexer(seq_pos, count(mux_bits), self.params_bob.K)
-        mux_eve = Multiplexer(seq_pos, count(mux_bits), self.params_eve.K)
-
-        if dec_choice == "Bob":
-            mux = mux_bob
-        else:
-            mux = mux_eve
-        # -- decoder
-        # params.frozen_bits s'adapte a la simulation demandee
-        # S'il s'agit de Bob ou d'Eve sans confidentialite, 
-        # les bits geles de Bob sont utilises
-        # Sinon, les bits geles de Eve sont utilises
-        
-        if dec_choice == "Eve01":
-            params.frozen_bits = self.params_bob.frozen_bits
-        
-        dec = aff3ct.module.decoder.Decoder_polar_SC_naive_sys(params.K, self.params_bob.N, params.frozen_bits)
-
-        # -- modulator
-        mdm = aff3ct.module.modem.Modem_BPSK_fast(N)
-
-        # -- noise generator
-        gen = aff3ct.tools.Gaussian_noise_generator_implem.FAST
-
-        # -- channel
-        chn = aff3ct.module.channel.Channel_AWGN_LLR(N, gen)
-
-        # -- monitor
-        mnt = aff3ct.module.monitor.Monitor_BFER_AR(sec_K,1000,100)
-
-        # -- Sigma sockets
-        self.sigma = np.ndarray(shape = (1,1), dtype=np.float32)
-        self.sigma[0,0] = params.sigma
-
-        mux_bob [" multiplexer   :: good_bits "] = splt["Split::bit_seq"]
-        mux_bob [" multiplexer    :: bad_bits "] = src_rand["generate::U_K"]
-        enc [" encode              :: U_K "] = mux_bob["multiplexer::sig_mux_out"]
-        mdm [" modulate            :: X_N1"] = enc["encode::X_N"]
-        chn [" add_noise           :: X_N "] = mdm["modulate::X_N2"]
-        mdm [" demodulate          :: Y_N1"] = chn["add_noise::Y_N"]
-        dec [" decode_siho         :: Y_N "] = mdm["demodulate::Y_N2"]
-        mux [" demultiplexer::mux_sequence"] = dec["decode_siho::V_K"] 
-        splt[" Collect           :: buffer"] = mux["demultiplexer::good_bits"]
-        mnt [" check_errors        ::   U "] = splt["Split::bit_seq"]
-        mnt [" check_errors        ::   V "] = splt["Collect::through"]
-        chn [" add_noise           ::  CP "] = self.sigma
-        mdm [" demodulate          ::  CP "] = self.sigma
-
-        self.seq = aff3ct.tools.sequence.Sequence(splt["Split"], mnt["check_errors"], 1)
-
         while self.stop_flag:
             
             while not self.seq.is_done():
                 self.seq.exec_step()
-
-            self.src.bin2img(self.img_rx, splt.get_rx())
+                
+            self.src.bin2img(self.img_rx, sim.rx)
 
             # Collecte du taux d'erreur binaire
-            self.error_rate[0,self.error_rate_idx] = mnt.get_ber()
-            
+            self.error_rate[0,self.error_rate_idx] = sim.mui
+            print(self.error_rate[0,self.error_rate_idx])
             self.error_rate_idx += 1
-            mnt.reset()
+            
 
             self.update_top_img()
             self.update_bottom_plot()
@@ -455,7 +342,7 @@ class App(tk.Tk):
         self.top_canvas.get_tk_widget().pack(side='top', fill='both', expand=True) 
  
         # Set up the lower frame for the BER curves
-        self.lower_frame = tk.LabelFrame(self.right_frame, text="BER")
+        self.lower_frame = tk.LabelFrame(self.right_frame, text="Mutual information")
         self.lower_frame.pack(side="bottom", fill="both", expand=True)
 
         # BER curves figure
@@ -493,6 +380,10 @@ class App(tk.Tk):
         self.error_rate_idx = 0
 
 app = App()
+app.bind('<Escape>', lambda e: close_win(e))
+
+def close_win(e):
+    app.destroy()
 
 app.mainloop()
 

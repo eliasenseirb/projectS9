@@ -36,26 +36,27 @@ protected:
     const size_t frame_len;
     size_t tx_current_idx;
 	size_t rx_current_idx;
-
+	size_t limit_rx;
 public:
 	/*!
 	 * \brief Constructor.
 	 */
-	Splitter(const std::vector<int> & input, const size_t img_size, const size_t frame_len);
+	Splitter(const std::vector<int> & input, const size_t img_size, const size_t frame_len, const size_t limit_rx);
 
 	/*!
 	 * \brief Destructor.
 	 */
 	virtual ~Splitter() = default;
-	virtual std::vector<int32_t> get_rx();
-	virtual std::vector<int32_t> get_tx();
-	virtual size_t			     get_tx_ptr();
-	virtual size_t			     get_rx_ptr();
-	virtual size_t			     get_img_size();
-	virtual size_t			     get_frame_size();
-	virtual void                 print_info();
-	virtual void				 set_rx_ptr(const size_t new_value);
-	virtual void 				 set_tx_ptr(const size_t new_value);
+	virtual std::vector<int32_t> get_rx         ();
+	virtual std::vector<int32_t> get_tx         ();
+	virtual size_t			     get_tx_ptr     ();
+	virtual size_t			     get_rx_ptr     ();
+	virtual size_t			     get_img_size   ();
+	virtual size_t			     get_frame_size ();
+	virtual void                 print_info     ();
+	virtual void				 set_rx_ptr     (const size_t new_value);
+	virtual void 				 set_tx_ptr     (const size_t new_value);
+	virtual void                 set_limit_rx   (const size_t new_value);
 	
 
 protected:

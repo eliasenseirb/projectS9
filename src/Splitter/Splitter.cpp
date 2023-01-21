@@ -12,8 +12,8 @@ using namespace aff3ct;
 using namespace aff3ct::module;
 
 Splitter::
-Splitter(const std::vector<int> & input, const size_t img_size, const size_t frame_len)
-: Module(), input(input), img_size(img_size), frame_len(frame_len), tx_current_idx(0), rx_current_idx(0)
+Splitter(const std::vector<int> & input, const size_t img_size, const size_t frame_len, const size_t limit_rx)
+: Module(), input(input), img_size(img_size), frame_len(frame_len), tx_current_idx(0), rx_current_idx(0), limit_rx(limit_rx)
 {
 	const std::string name = "Splitter";
 	this->set_name(name);
@@ -36,11 +36,13 @@ Splitter(const std::vector<int> & input, const size_t img_size, const size_t fra
 	// COLLECT TASK
 	auto &p2 = this->create_task("Collect");
 	auto p2s_in  = this->template create_socket_in<int32_t>(p2,"buffer",this->frame_len);
-	auto p2s_out = this->template create_socket_out<int32_t>(p2,"through",this->frame_len);
+	auto p2s_out = this->template create_socket_out<int32_t>(p2,"through",this->limit_rx);
+	
 	this->create_codelet(p2, [p2s_in, p2s_out](Module &m, Task &t, const size_t frame_id) -> int
 	{
 		static_cast<Splitter&>(m)._collect(static_cast<int32_t*>(t[p2s_in].get_dataptr()),
 										   static_cast<int32_t*>(t[p2s_out].get_dataptr()),
+										   
 										   frame_id);
 		return 0;
 	});
@@ -64,7 +66,8 @@ _collect(int32_t * in, int32_t * through, const size_t frame_id)
 		this->buffer[this->rx_current_idx++] = in[i];
 		if (this->rx_current_idx >= this->img_size){ this->rx_current_idx = 0; std::cout<<"reset"<<std::endl;}
 	}
-	std::copy(in, in+this->frame_len, through);
+	std::copy(in, in+this->limit_rx, through);
+	
 }
 
 std::vector<int32_t> Splitter::
@@ -119,4 +122,10 @@ void Splitter::
 set_rx_ptr(const size_t new_value)
 {
 	this->rx_current_idx = new_value;
+}
+
+void Splitter::
+set_limit_rx(const size_t new_value)
+{
+	this->limit_rx = new_value;
 }

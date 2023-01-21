@@ -5,6 +5,19 @@ position
 
 """
 
+import os, sys
+from dotenv import load_dotenv
+
+load_dotenv()
+sys.path.append(os.getenv("AFF3CT_PATH"))
+sys.path.append("../"+os.getenv("AFF3CT_PATH"))
+sys.path.append(os.getenv("PYAF_PATH"))
+sys.path.append("../"+os.getenv("PYAF_PATH"))
+
+import py_aff3ct as aff3ct
+import py_aff3ct.module.encoder as af_enc
+import pyaf
+
 def all_no(bits_Bob: list[bool], bits_Eve: list[bool]):
 	"""Fait une liste complete des bits sur lesquels ne pas envoyer"""
 	out = [False for i in range(len(bits_Bob))]
@@ -58,3 +71,22 @@ def get_secrecy_position(frozen_bits, information_bits):
             seq_ptr += 1
 
     return positions
+
+def weak_secrecy(Bob, Eve):
+    # Determination des bits geles de Bob
+    fbgen_bob = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(Bob.K,Bob.N)
+    Bob.noise = aff3ct.tools.noise.Sigma(Bob.sigma)
+    fbgen_bob.set_noise(Bob.noise)
+    Bob.frozen_bits = fbgen_bob.generate()
+
+    # Determination des bits geles de Eve
+    fbgen_eve = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(Eve.K,Eve.N)
+    Eve.noise = aff3ct.tools.noise.Sigma(Eve.sigma)
+    fbgen_eve.set_noise(Eve.noise)
+    Eve.frozen_bits = fbgen_eve.generate()
+
+    mux_bits, pos_mux_bits = all_no(Bob.frozen_bits, Eve.frozen_bits)
+
+    sec_sz = count(mux_bits)
+
+    return get_secrecy_position(Bob.frozen_bits, pos_mux_bits), sec_sz

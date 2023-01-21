@@ -29,7 +29,7 @@ PYBIND11_MODULE(pyaf, m){
 		
 	py::module_ m_splitter = m.def_submodule("splitter");
 	py::class_<aff3ct::module::Splitter>(m_splitter, "Splitter", py_aff3ct_module)
-		.def(py::init<const std::vector<int> &, const size_t, const size_t>(), "input"_a, "img_size"_a, "frame_len"_a)
+		.def(py::init<const std::vector<int> &, const size_t, const size_t, const size_t>(), "input"_a, "img_size"_a, "frame_len"_a, "limit_rx"_a)
 		.def("get_rx", [](aff3ct::module::Splitter& self){
 			return self.get_rx();
 		})
@@ -56,9 +56,32 @@ PYBIND11_MODULE(pyaf, m){
 		})
 		.def("set_tx_ptr", [](aff3ct::module::Splitter& self, const size_t new_value){
 			self.set_tx_ptr(new_value);
+		})
+		.def("set_limit_rx", [](aff3ct::module::Splitter& self, const size_t new_value){
+			self.set_limit_rx(new_value);
 		});
 
-	
+	py::module_ m_mutual_info = m.def_submodule("mutualinformation");
+	py::class_<aff3ct::module::MutualInformation>(m_mutual_info, "MutualInformation", py_aff3ct_module)
+		.def(py::init<const size_t>(), "frame_size"_a)
+		.def("get_mui", [](aff3ct::module::MutualInformation& self){
+			return self.get_mutual_information();
+		})
+		.def("set_limit", [](aff3ct::module::MutualInformation& self, const size_t new_value){
+			self.set_limit(new_value);
+		});
+
+	/*
+	py::module_ m_sliding_window = m.def_submodule("slidingwindow");
+	py::class_<aff3ct::module::SlidingWindow>(m_sliding_window, "SlidingWindow", py_aff3ct_module)
+		.def(py::init<const size_t>(), "window_size"_a)
+		.def("append", [](aff3ct::module::SlidingWindow& self, float data){
+			self.append(data);
+		})
+		.def("get_window", [](aff3ct::module::SlidingWindow& self, float* win_out){
+			self.get_window(win_out);
+		});
+	*/
 	
 	py::module_ m_filter       = m.def_submodule("filter"      );
 
