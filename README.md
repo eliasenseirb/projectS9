@@ -24,7 +24,7 @@ It focuses on the **weak secrecy** sections in [1] and tries to implement it in 
 
 The following Figure illustrates the problem.
 
-![Schema of the problem](figs/schema.png)
+![Schema of the problem](figures/schema.png)
 
 
 
