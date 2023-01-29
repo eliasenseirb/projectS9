@@ -120,6 +120,10 @@ This script implements the bare bones of the weak secrecy. The implemented commu
 
 #### Radios demonstrator
 
+**Disclaimer:** The latest version of this code has not been tested with the radios. There may be some bugs remaining that will crash the program. If so, please feel free to open an issue on github so we may help you fix it.
+
+Some functionalities also were not fully implemented in the radios demonstrator. Please refer to [this](#not-implemented) section to know what *may* happen which is not a bug.
+
 Two scripts are used for the radios demonstrator. One for the transmitter Tx, and one for the receiver Rx.
 By default, they are configured to be used with USRP-B100 radios, using the DVB-S2 standard of communication.
 
@@ -129,15 +133,28 @@ The transmitter can be run using
 $ python3 TX/tx_final.py
 ```
 
-This prompts a user interface similar to the previous one, but without the statistics. It can be used to load an image and broadcast it via the radio.
+This prompts a user interface similar to the previous one, but without the statistics. It can be used to load an image and broadcast it via the radio. The implemented communication chain is the following.
+
+![TX_chain](figures/tx.png)
 
 The receiver can be run using
 
 ```bash
-$ python3 RX/todo.py
+$ python3 RX/RX_interface.py
 ```
 
-This script receives data from the USRP-B100 radio n times a second and displays both the scatterplot received and the image as it is received.
+This script receives data from the USRP-B100 radio n times a second and displays both the scatterplot received and the image as it is received. The implemented communication chain is the following.
+
+![RX_chain](figures/rx.png)
+
+<a href="not-implemented"/>
+
+#### Limits of the radios
+
+This project lasted only three months, leaving some ideas partially or not implemented. If you use the radio demonstrator as is, these might happen to you.
+
+- **Synchronize both Splitter modules**: The Splitter module of the transmitter and the receiver are not synchronized. This leads to the receiver buffering the image starting from the middle instead of the beginning.
+- **Random noises appearing**: When experimenting with the radios, we observed that every 50 pixels of an image was replaced with a random value. This never happened without the radios, and we could not find the issue in time.
 
 **References**
 
