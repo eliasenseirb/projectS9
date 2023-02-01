@@ -299,11 +299,7 @@ class App(tk.Tk):
 
         # Decoders radio buttons
         # Decoder can either be SC_Fast or SC_Naive
-        # Considering SC_Fast is not adapted to the
-        # current problem, this is just some weird flex
-        # and it has no effect
-        # But well, nobody can tell anyways
-
+       
         self.decoder_label = tk.Label(self.left_frame, text="Decoder:")
         self.decoder_label.pack()
         self.decoder = tk.StringVar(self.left_frame)
@@ -346,12 +342,10 @@ class App(tk.Tk):
 
         # Decoder choice
         # Three choices can be made here
-        #  Bob Decoder: Use Bob's frozen bits, and no degradation
+        #  Bob Decoder: Use Bob's frozen bits (fb), and no degradation
         #  for the SNR
-        #  Eve's Decoder (Bob fb): Use Eve's decoder (degraded)
+        #  Eve's Decoder (Bob fb): Use Eve's decoder (for a degraded channel)
         #  bot Bob's fb
-        #  Eve's Decoder (Eve fb): Use both Eve's decoder (degraded)
-        #  and Eve's fb (demonstrates weak secrecy)
 
         self.decoder_choice = tk.StringVar()
         self.decoder_choice_str = tk.Label(self.left_frame, text="Decoder choice:")
@@ -429,7 +423,7 @@ class App(tk.Tk):
         self.params_bob = Bob(self.snr_slider.get())
         self.params_eve = Eve(self.snr_slider.get())
 
-        # pseudo-switch case statement for Python
+        # pseudo-switch-case statement for Python
         # For compatibility with versions 3.7, 3.8 and 3.9
         self.params_case = {
             "Bob": self.params_bob,
