@@ -34,13 +34,12 @@ from pyaf.splitter import Splitter
 from pyaf.multiplexer import Multiplexer
 from pyaf.padder import Padder
 from source_nomod import Source
-from myutils import all_no, no, get_secrecy_position, count, weak_secrecy
+from frozenbits_handler import all_no, no, get_secrecy_position, count, weak_secrecy
 from params import Bob, Eve
 from dvbs2_factory import dvbs2_factory
 
 
 class App(tk.Tk):
-    
 
     def open_file(self):
         """Prompt the user to select a file and store its path"""
