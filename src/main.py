@@ -30,6 +30,8 @@ sys.path.append("../"+os.getenv("AFF3CT_PATH"))
 import py_aff3ct as aff3ct
 import py_aff3ct.module.encoder as af_enc
 
+from ..interface.params import Bob, Eve
+
 
 
 ## THE FOLLOWING FUNCTIONS MAY NOT BE CALLED
@@ -55,7 +57,7 @@ def display_frozen_bits(frozen_bits):
 
 
 # Parameters
-
+"""
 K = 512
 N = 1024
 ebn0_min = 0
@@ -67,7 +69,13 @@ esn0_w = ebn0 + 7 * math.log10(K/N)
 sigma_vals_w = 1/(math.sqrt(2) * 10 ** (esn0_w / 20))
 esn0 = ebn0 + 10 * math.log10(K/N)
 sigma_vals = 1/(math.sqrt(2) * 10 ** (esn0 / 20))
+"""
 
+ebn0 = 12
+bob = Bob(ebn0)
+eve = Eve(ebn0)
+
+breakpoint()
 
 fbgen = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(K,N)
 noise = aff3ct.tools.noise.Sigma(sigma_vals[0])

@@ -210,21 +210,22 @@ img_rx = np.ndarray(shape=img_shape, dtype=np.uint8)
 # -- CHAINE DE COM
 
 # -- -- BITS GELES
-fbgen = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(params.K,params.N)
+fbgen_b = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(params_bob.K,params.N)
 params_bob.noise = aff3ct.tools.noise.Sigma(params_bob.sigma)
-fbgen.set_noise(params_bob.noise)
-params_bob.frozen_bits = fbgen.generate()
+fbgen_b.set_noise(params_bob.noise)
+params_bob.frozen_bits = fbgen_b.generate()
 
+fbgen_e = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(params_eve.K,params.N)
 params_eve.noise = aff3ct.tools.noise.Sigma(params_eve.sigma)
-fbgen.set_noise(params_eve.noise)
-params_eve.frozen_bits = fbgen.generate()
+fbgen_e.set_noise(params_eve.noise)
+params_eve.frozen_bits = fbgen_e.generate()
 
 mux_bits, pos_mux_bits = all_no(params_bob.frozen_bits, params_eve.frozen_bits)
 params.sec_sz = count(mux_bits)
 
-# display_common_frozen_bits(params_bob.frozen_bits, params_eve.frozen_bits)
+display_common_frozen_bits(params_bob.frozen_bits, params_eve.frozen_bits)
 
-
+breakpoint()
 """to_remove = []
 for pos in pos_mux_bits:
     if pos > params.K:
