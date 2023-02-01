@@ -33,7 +33,7 @@ import pyaf
 from pyaf.splitter import Splitter
 from pyaf.multiplexer import Multiplexer
 from source_nomod import Source
-from myutils import all_no, no, get_secrecy_position, count
+from frozenbits_handler import all_no, no, get_secrecy_position, count
 from params import Bob, Eve
 
 class App(tk.Tk):
