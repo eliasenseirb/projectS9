@@ -23,7 +23,7 @@ from pyaf.splitter import Splitter
 from pyaf.multiplexer import Multiplexer
 from pyaf.mutualinformation import MutualInformation
 from pyaf.padder import Padder
-from myutils import weak_secrecy, gen_frozen, display_frozen_bits, display_common_frozen_bits
+from frozenbits_handler import weak_secrecy, gen_frozen
 
 class Sim:
     """

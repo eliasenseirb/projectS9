@@ -1,5 +1,5 @@
 import math
-from myutils import all_no, no, count
+from frozenbits_handler import all_no, no, count
 
 class params:
 
