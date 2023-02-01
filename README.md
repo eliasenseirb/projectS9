@@ -13,6 +13,7 @@ ___________
 [**How to use**](#usage)
 - [Virtual demonstrator](#virtual)
 - [Radios demonstrator](#radios)
+- [Limits of the Radios Demonstrator](#not_implemented)
 ___________
 
 <a name="overview"/>
@@ -21,7 +22,7 @@ ___________
 
 This project's aim is to implement a form of secrecy using the polarization properties of polar codes.
 
-It focuses on the **weak secrecy** sections in [1] and tries to implement it in a communication chain using `Aff3ct` modules.
+It focuses on the "*weak secrecy*"-related chapters in [1] and tries to implement it in a communication chain using [`Aff3ct`](https://github.com/aff3ct/aff3ct) modules.
 
 The following Figure illustrates the problem.
 
@@ -40,9 +41,11 @@ ___________
 
 **Dependencies**
 
-[py_aff3ct](https://github.com/aff3ct/py_aff3ct)
+- [py_aff3ct](https://github.com/aff3ct/py_aff3ct)
 
-[pyaf](https://github.com/rtajan/pyaf)
+- [pyaf](https://github.com/rtajan/pyaf)
+
+And their respective dependencies.
 
 **Compile the pyaf modules**
 
@@ -147,14 +150,16 @@ This script receives data from the USRP-B100 radio n times a second and displays
 
 ![RX_chain](figures/rx.png)
 
-<a href="not-implemented"/>
+<a name="not_implemented"/>
 
-#### Limits of the radios
+#### Limits of the Radios Demonstrator
 
 This project lasted only three months, leaving some ideas partially or not implemented. If you use the radio demonstrator as is, these might happen to you.
 
 - **Synchronize both Splitter modules**: The Splitter module of the transmitter and the receiver are not synchronized. This leads to the receiver buffering the image starting from the middle instead of the beginning.
 - **Random noises appearing**: When experimenting with the radios, we observed that every 50 pixels of an image was replaced with a random value. This never happened without the radios, and we could not find the issue in time.
+- **Compatibility between radios and interface**: When running the transmitter or the receiver's code with a tkinter gui, the script gets stuck in the transmission/reception loop and never gives back control to the gui.
+- **Not up to date**: The last additions to the virtual version of the demonstrator (namely, the possibility for Eve to possess or not the demultiplexer) have not been added to the radios version, due to the impossibility to test it in time.
 
 **References**
 
