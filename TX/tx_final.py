@@ -52,7 +52,7 @@ class App(tk.Tk):
         self.img_rx = np.ndarray(shape=self.img_shape, dtype=np.uint8)
 
         # -- Source
-        # Permet de convertir l'image en sequence binaire
+        # Converts the grayscale image into a bin sequence
         self.src = Source(self.img, 1)
 
     def start(self):
