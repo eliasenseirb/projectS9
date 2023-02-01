@@ -92,6 +92,7 @@ ___________
 ### How to Use
 
 Three codes are given in this repository. One is made for simulations without radios. Two are made to demonstrate the weak secrecy using physical radios.
+The Python scripts given in the `src/` folder were used during the project development but should **not** be executed manually. There is a non-zero probability that they might be broken.
 
 <a name="virtual"/>
 
