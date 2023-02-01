@@ -31,7 +31,8 @@ class Padder : public Module
 
 protected:
 	int init_size;
-    int final_size;
+	int final_size;
+
 
 
 public:
@@ -46,8 +47,11 @@ public:
 	virtual ~Padder() = default;
 
 protected:
+
 	virtual void _padder  (const int32_t * random_bits, const int32_t * data_bits, int32_t* out, const int frame_id);
-    virtual void _unpadder (const int32_t * pad_sequence, int32_t * good_bits, const int frame_id);
+  virtual void _unpadder (const int32_t * pad_sequence, int32_t * good_bits, const int frame_id);
+
+
 };
 }
 }
