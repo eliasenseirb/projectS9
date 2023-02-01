@@ -30,6 +30,8 @@ sys.path.append("../"+os.getenv("AFF3CT_PATH"))
 import py_aff3ct as aff3ct
 import py_aff3ct.module.encoder as af_enc
 
+from ..interface.params import Bob, Eve
+
 
 
 ## THE FOLLOWING FUNCTIONS MAY NOT BE CALLED
@@ -55,7 +57,7 @@ def display_frozen_bits(frozen_bits):
 
 
 # Parameters
-
+"""
 K = 512
 N = 1024
 ebn0_min = 0
@@ -67,7 +69,13 @@ esn0_w = ebn0 + 7 * math.log10(K/N)
 sigma_vals_w = 1/(math.sqrt(2) * 10 ** (esn0_w / 20))
 esn0 = ebn0 + 10 * math.log10(K/N)
 sigma_vals = 1/(math.sqrt(2) * 10 ** (esn0 / 20))
+"""
 
+ebn0 = 12
+bob = Bob(ebn0)
+eve = Eve(ebn0)
+
+breakpoint()
 
 fbgen = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(K,N)
 noise = aff3ct.tools.noise.Sigma(sigma_vals[0])
@@ -94,9 +102,12 @@ chn2 = aff3ct.module.channel.Channel_AWGN_LLR(N,gen)
 mnt  = aff3ct.module.monitor.Monitor_BFER_AR(K,1000)
 mnt2 = aff3ct.module.monitor.Monitor_BFER_AR(K,1000)
 
+
 # Link sockets together
 sigma         = np.ndarray(shape = (1,1),  dtype = np.float32)
 sigma_wiretap = np.ndarray(shape = (1,1),  dtype = np.float32)
+
+
 
 
 enc["encode        ::U_K "].bind(src["generate    ::U_K "])
@@ -104,18 +115,19 @@ mdm["modulate      ::X_N1"].bind(enc["encode      ::X_N "])
 
 
 chn["add_noise     ::X_N "].bind(mdm["modulate    ::X_N2"])
-chn2["add_noise    ::X_N "].bind(mdm["modulate    ::X_N2"])
 mdm["demodulate    ::Y_N1"].bind(chn["add_noise   ::Y_N "])
-mdm2["demodulate   ::Y_N1"].bind(chn2["add_noise  ::Y_N "])
 dec["decode_siho   ::Y_N "].bind(mdm["demodulate  ::Y_N2"])
-dec2["decode_siho  ::Y_N "].bind(mdm2["demodulate ::Y_N2"])
 mnt["check_errors  ::U   "].bind(src["generate    ::U_K "])
 mnt["check_errors  ::V   "].bind(dec["decode_siho ::V_K "])
+chn["add_noise     ::CP  "].bind(                  sigma  )
+mdm["demodulate    ::CP  "].bind(                  sigma  )
+
+chn2["add_noise    ::X_N "].bind(mdm["modulate    ::X_N2"])
+mdm2["demodulate   ::Y_N1"].bind(chn2["add_noise  ::Y_N "])
+dec2["decode_siho  ::Y_N "].bind(mdm2["demodulate ::Y_N2"])
 mnt2["check_errors  ::U  "].bind(src["generate    ::U_K "])
 mnt2["check_errors  ::V  "].bind(dec2["decode_siho ::V_K "])
-chn["add_noise     ::CP  "].bind(                  sigma  )
 chn2["add_noise    ::CP  "].bind(          sigma_wiretap  )
-mdm["demodulate    ::CP  "].bind(                  sigma  )
 mdm2["demodulate   ::CP  "].bind(          sigma_wiretap  )
 
 

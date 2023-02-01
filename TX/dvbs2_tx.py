@@ -5,12 +5,13 @@ import sys
 load_dotenv()
 # ensure we can find aff3ct
 sys.path.append(os.getenv("AFF3CT_PATH"))
+sys.path.append("../"+os.getenv("AFF3CT_PATH"))
 import py_aff3ct as aff3ct
 
-sys.path.append(os.getenv("PYAF_PATH"))
+sys.path.append("../"+os.getenv("PYAF_PATH"))
 import pyaf
 
-sys.path.append(os.getenv("THREADED_PATH"))
+sys.path.append("../"+os.getenv("THREADED_PATH"))
 import threaded_sequence
 
 

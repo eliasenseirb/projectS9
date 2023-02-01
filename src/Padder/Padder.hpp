@@ -34,6 +34,7 @@ protected:
 	int final_size;
 
 
+
 public:
 	/*!
 	 * \brief Constructor.
@@ -46,8 +47,10 @@ public:
 	virtual ~Padder() = default;
 
 protected:
-	virtual void _pad(const int32_t* sig_in, int32_t* sig_out, const int frame_id);
-	virtual void _pad2(const int32_t* sig_in, const int32_t* r_in, int32_t* sig_out, const int frame_id);
+
+	virtual void _padder  (const int32_t * random_bits, const int32_t * data_bits, int32_t* out, const int frame_id);
+  virtual void _unpadder (const int32_t * pad_sequence, int32_t * good_bits, const int frame_id);
+
 
 };
 }

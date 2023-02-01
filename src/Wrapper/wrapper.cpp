@@ -18,15 +18,71 @@ PYBIND11_MODULE(pyaf, m){
 
 	// Import AFF3CT module from py_AFF3CT
 	py::object py_aff3ct_module = (py::object) py::module_::import("py_aff3ct").attr("module").attr("Module");
-
+	
 	py::module_ m_padder       = m.def_submodule("padder"      );
 	py::class_<aff3ct::module::Padder>(m_padder,"Padder", py_aff3ct_module)
 		.def(py::init<const int, const int>(), "init_size"_a, "final_size"_a);
-
+	
 	py::module_ m_multiplexer       = m.def_submodule("multiplexer"      );
 	py::class_<aff3ct::module::Multiplexer>(m_multiplexer,"Multiplexer", py_aff3ct_module)
-		.def(py::init<const std::vector<int> &, const int>(), "positions"_a, "N_code"_a);
+		.def(py::init<const std::vector<int> &, const int, const int>(), "positions"_a, "sec_sz"_a, "N_code"_a);
+		
+	py::module_ m_splitter = m.def_submodule("splitter");
+	py::class_<aff3ct::module::Splitter>(m_splitter, "Splitter", py_aff3ct_module)
+		.def(py::init<const std::vector<int> &, const size_t, const size_t, const size_t>(), "input"_a, "img_size"_a, "frame_len"_a, "limit_rx"_a)
+		.def("get_rx", [](aff3ct::module::Splitter& self){
+			return self.get_rx();
+		})
+		.def("get_tx", [](aff3ct::module::Splitter& self){
+			return self.get_tx();
+		})
+		.def("get_tx_ptr", [](aff3ct::module::Splitter& self){
+			return self.get_tx_ptr();
+		})
+		.def("get_rx_ptr", [](aff3ct::module::Splitter& self){
+			return self.get_rx_ptr();
+		})
+		.def("get_img_size", [](aff3ct::module::Splitter& self){
+			return self.get_img_size();
+		})
+		.def("get_frame_size", [](aff3ct::module::Splitter& self){
+			return self.get_frame_size();
+		})
+		.def("print_info", [](aff3ct::module::Splitter& self){
+			self.print_info();
+		})
+		.def("set_rx_ptr", [](aff3ct::module::Splitter& self, const size_t new_value){
+			self.set_rx_ptr(new_value);
+		})
+		.def("set_tx_ptr", [](aff3ct::module::Splitter& self, const size_t new_value){
+			self.set_tx_ptr(new_value);
+		})
+		.def("set_limit_rx", [](aff3ct::module::Splitter& self, const size_t new_value){
+			self.set_limit_rx(new_value);
+		});
 
+	py::module_ m_mutual_info = m.def_submodule("mutualinformation");
+	py::class_<aff3ct::module::MutualInformation>(m_mutual_info, "MutualInformation", py_aff3ct_module)
+		.def(py::init<const size_t>(), "frame_size"_a)
+		.def("get_mui", [](aff3ct::module::MutualInformation& self){
+			return self.get_mutual_information();
+		})
+		.def("set_limit", [](aff3ct::module::MutualInformation& self, const size_t new_value){
+			self.set_limit(new_value);
+		});
+
+	/*
+	py::module_ m_sliding_window = m.def_submodule("slidingwindow");
+	py::class_<aff3ct::module::SlidingWindow>(m_sliding_window, "SlidingWindow", py_aff3ct_module)
+		.def(py::init<const size_t>(), "window_size"_a)
+		.def("append", [](aff3ct::module::SlidingWindow& self, float data){
+			self.append(data);
+		})
+		.def("get_window", [](aff3ct::module::SlidingWindow& self, float* win_out){
+			self.get_window(win_out);
+		});
+	*/
+	
 	py::module_ m_filter       = m.def_submodule("filter"      );
 
 	// Bind a custom class, here is the binding for the "aff3ct::module::Filter<float>" class.
