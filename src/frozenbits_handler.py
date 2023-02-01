@@ -62,8 +62,8 @@ def get_secrecy_position(frozen_bits, information_bits):
 
     return positions
 
-def weak_secrecy(Bob, Eve):
-    
+def gen_frozen(Bob, Eve):
+    """Generate frozen bits for Bob and Eve"""
     # Bob's frozen bits
     fbgen_bob = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(Bob.K,Bob.N)
     Bob.noise = aff3ct.tools.noise.Sigma(Bob.sigma)
@@ -75,6 +75,13 @@ def weak_secrecy(Bob, Eve):
     Eve.noise = aff3ct.tools.noise.Sigma(Eve.sigma)
     fbgen_eve.set_noise(Eve.noise)
     Eve.frozen_bits = fbgen_eve.generate()
+
+def weak_secrecy(Bob, Eve):
+    """
+    Generate the frozen bits for Bob and Eve
+    Then return every secrecy bit's position and their amount
+    """
+    gen_frozen(Bob, Eve)
 
     mux_bits, pos_mux_bits = all_no(Bob.frozen_bits, Eve.frozen_bits)
 
