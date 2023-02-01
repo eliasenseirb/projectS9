@@ -195,7 +195,7 @@ class App(tk.Tk):
         # -- Multiplexer
         mux = Multiplexer(seq_pos, count(mux_bits), K)
 
-        # -- decoder
+        # -- Decoder
         # params.frozen_bits always holds Bob's frozen bits
         # This means that in this case Eve always knows which
         # channels Bob is listening on, and will always
@@ -299,10 +299,6 @@ class App(tk.Tk):
 
         # Decoders radio buttons
         # Decoder can either be SC_Fast or SC_Naive
-        # Considering SC_Fast is not adapted to the
-        # current problem, this is just some weird flex
-        # and it has no effect
-        # But well, nobody can tell anyways
 
         self.decoder_label = tk.Label(self.left_frame, text="Decoder:")
         self.decoder_label.pack()
