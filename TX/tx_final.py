@@ -25,6 +25,7 @@ sys.path.append(os.getenv("AFF3CT_PATH"))
 sys.path.append(os.getenv("PYAF_PATH"))
 sys.path.append(os.getenv("THREADED_PATH"))
 sys.path.append("../src")
+sys.path.append("..")
 
 import py_aff3ct as aff3ct
 import py_aff3ct.module.encoder as af_enc

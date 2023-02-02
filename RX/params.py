@@ -17,6 +17,7 @@ class params:
         self.n_frames =1           # number of frames
         self.MODCOD = "QPSK-S_8/9" # modulation
         self.p = 16200             # padding size 
+        self.freq_shift = 0.025
 
 class Bob(params):
     def __init__(self, ebn0):

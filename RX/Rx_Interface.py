@@ -27,10 +27,14 @@ sys.path.append(os.getenv("PYAF_PATH"))
 sys.path.append(os.getenv("THREADED_PATH"))
 sys.path.append("../src")
 sys.path.append("./src")
+sys.path.append("..")
+
+
 
 import py_aff3ct as aff3ct
 import py_aff3ct.module.encoder as af_enc
 import pyaf
+from radio import Radio
 from pyaf.splitter import Splitter
 from pyaf.multiplexer import Multiplexer
 from source_nomod import Source
@@ -188,7 +192,7 @@ class App(tk.Tk):
         src_rand = aff3ct.module.source.Source_random_fast(K, 12)
 
         # -- Splitter
-        splt = Splitter(self.src.img_bin, len(self.src.img_bin), sec_K)
+        splt = Splitter(self.src.img_bin, len(self.src.img_bin), sec_K, sec_K)
 
         # -- Encoder
         enc = aff3ct.module.encoder.Encoder_polar_sys(K, N, self.params_bob.frozen_bits)
@@ -222,7 +226,29 @@ class App(tk.Tk):
         # -- Sigma sockets
         self.sigma = np.ndarray(shape = (1,1), dtype=np.float32)
         self.sigma[0,0] = params.sigma
+
+        # -- Radio
+        self.radio_setup = Radio(params, self.path_file)
         
+        self.rad      = pyaf.radio.Radio_USRP(self.radio_setup.rad_params)
+        
+
+        self.rad.n_frames=params.n_frames
+
+        
+        
+        
+        modem,
+        framer,
+        pl_scrambler,
+        shp_filter, mcd_filter,
+        coarse_frq_sync, lr_frq_sync, fp_frq_sync,
+        timing_sync,
+        symbol_agc,
+        frame_sync,
+        noise_est = self.rad_params.modules
+        
+        breakpoint()
         coarse_frq_sync ["synchronize::X_N1"] = rad         [    "receive::Y_N1"] 
         coarse_frq_sync ["synchronize::Y_N2"] = mcd_filter  [     "filter::X_N1"]
         mcd_filter      [     "filter::Y_N2"] = timing_sync ["synchronize::X_N1"]
