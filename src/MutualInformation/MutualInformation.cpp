@@ -66,14 +66,6 @@ _mutualinformation(const int32_t * src, const int32_t * rx, int32_t * through, c
 			py[y] += pxy[x][y]; 
 		}
 	
-	std::cout << "Probas estimées" << std::endl
-		      << "+=====+=====+=====+" << std::endl
-			  << "| X/Y |  0  |  1  |" << std::endl
-			  << "+=====+=====+=====+" << std::endl
-			  << "|  0  | " << std::fixed << std::setprecision(2) << pxy[0][0] << "| " << std::fixed << std::setprecision(2) << pxy[0][1] << std::endl
-			  << "+=====+=====+=====+" << std::endl
-			  << "|  1  | " << std::fixed << std::setprecision(2) << pxy[1][0] << "| " << std::fixed << std::setprecision(2) << pxy[1][1] << std::endl
-			  << "+=====+=====+=====+" << std::endl;
 	// calcul d'information mutuelle
 	// voir rapport pour la formule
 	for (size_t x = 0; x < 2; x++)
@@ -82,7 +74,7 @@ _mutualinformation(const int32_t * src, const int32_t * rx, int32_t * through, c
 			if (px[x] != 0 && py[y] != 0 && pxy[x][y] != 0)
 				info += log2(pxy[x][y]/(px[x]*py[y])) * pxy[x][y];
 		}
-	std::cout << "Info mutuelle : " << info << std::endl;
+	
 	mui = info;
 }
 
