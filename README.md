@@ -50,7 +50,7 @@ And their respective dependencies.
 **Compile the pyaf modules**
 
 - Drag and drop the different modules `Multiplexer`, `Padder`, `Splitter` and `MutualInformation` from the `src` folder to your `pyaf/src/cpp/Modules` folder.
-- Replace the folder `pyaf/src/cpp/Modules/Wrapper` with `src/Wrapper`
+- Replace the folder `pyaf/src/cpp/Wrapper` with `src/Wrapper`
 - Recompile the library with the following commands
 ```bash
 $ cd pyaf/build
