@@ -21,6 +21,7 @@ sys.path.append(os.getenv("PYAF_PATH"))
 sys.path.append("../"+os.getenv("PYAF_PATH"))
 
 sys.path.append("../src")
+sys.path.append("./src")
 
 import py_aff3ct as aff3ct
 import py_aff3ct.module.encoder as af_enc
@@ -28,13 +29,14 @@ import pyaf
 from pyaf.splitter import Splitter
 from pyaf.multiplexer import Multiplexer
 from source_nomod import Source
-from myutils import all_no, no, get_secrecy_position, count
+from frozenbits_handler import all_no, no, get_secrecy_position, count
 from params import Bob, Eve
 
 class App(tk.Tk):
     
 
     def open_file(self):
+        """Prompt the user to select a file and store its path"""
         # Open a file selection dialog
         self.path_file = fd.askopenfilename()
         self.file_text_var.set(self.path_file.split("/")[-1])
@@ -49,15 +51,17 @@ class App(tk.Tk):
 
 
     def start(self):
+        """Run the simulation"""
         self.error_msg.set("")
         self.run_simulation()
 
     def stop(self):
+        """Stop the simulation"""
         self.error_msg.set("Simulation stopped.")
         self.left_frame.after_cancel(self._job)
 
     def format_img(self, img: list[int], img_shape: tuple[int, int]) -> np.ndarray :
-        """Transforme une liste d'entiers en tableau numpy d'uint8"""
+        """Transform an int list into np.uint8"""
         if len(img) != 8*img_shape[0]*img_shape[1]:
             raise ValueError(f"Erreur ! La taille de la liste {len(img)} ne correspond pas au format d'image ({img_shape[0]}, {img_shape[1]})")
 
@@ -67,6 +71,7 @@ class App(tk.Tk):
         return img_reshaped
     
     def update_top_img(self):
+        """Update the top plot"""
         self.top_plot.imshow(self.img_rx, cmap='gist_gray')
         self.top_plot.set_xlabel('pixels')
         self.top_plot.set_ylabel('pixels')
@@ -74,7 +79,7 @@ class App(tk.Tk):
         self.top_canvas.flush_events()
 
     def update_bottom_plot(self):
-
+        """Update the bottom plot"""
         if self.error_rate_idx > 10:
             left  = self.error_rate_idx-10
             right = self.error_rate_idx
@@ -92,6 +97,7 @@ class App(tk.Tk):
         self.bottom_canvas.draw()
 
     def clear_img(self):
+        """Clear the image plot"""
         img_vide = np.zeros((2,2), dtype=int)
         self.top_plot.imshow(img_vide, cmap='gist_gray')
         self.top_plot.set_xlabel('')
@@ -99,9 +105,11 @@ class App(tk.Tk):
         self.top_canvas.draw()
     
     def stop_simu(self):
+        """Stop receiving"""
         self.stop_flag = 0
 
     def select_decoder(self):
+        """Select the polar decoder used"""
         K = int(self.k_var.get())  # replace with desired value
         N = int(self.n_var.get())  # replace with desired value
         
@@ -117,12 +125,15 @@ class App(tk.Tk):
         elif decoder == 'sc_naive':
             dec = aff3ct.module.decoder.Decoder_polar_SC_naive_sys(K, N, frozen_bits)
         else:
-            # use other decoder
+            # use other decoder, to be defined
             dec = aff3ct.module.decoder.Decoder_other(K, N, frozen_bits)
         return dec
 
+    def run_sim(self):
+        self._run_sim()
 
-    def run_sim_alex(self):
+    def _run_sim(self):
+        """Error check then run the simulation"""
         self.stop_flag = 1
 
         if(self.path_file == ''):
@@ -142,40 +153,31 @@ class App(tk.Tk):
         params = self.params_case[dec_choice]
         
         
-        K = params.K        # taille a l'entree de l'encodeur
-        N = params.N        # taille a la sortie de l'encodeur
+        K = params.K        # size of the input of the encoder
+        N = params.N        # size of the output of the encoder
         ebn0 = params.ebn0  # SNR
 
         esn0 = ebn0 + 10*math.log10(K/N)
         sigma_val = 1/(math.sqrt(2)*10**(esn0/20))
 
 
-        
 
-        # -- CHAINE DE COM
-
-        # -- -- BITS GELES
-        # Ici, on compare les bits geles de Bob et de Eve
-        # Le mode de decodage de Eve n'est pas pris en compte (sinon on ne pourrait
-        # pas communiquer)
-        # Cela permet de determiner un groupe de bits sur lesquels communiquer
-
-        # Determination des bits geles de Bob
+        # Bob's frozen bits
         fbgen = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(K,N)
         self.params_bob.noise = aff3ct.tools.noise.Sigma(self.params_bob.sigma)
         fbgen.set_noise(self.params_bob.noise)
         self.params_bob.frozen_bits = fbgen.generate()
 
-        # Determination des bits geles de Eve
+        # Bob's frozen bits
         self.params_eve.noise = aff3ct.tools.noise.Sigma(self.params_eve.sigma)
         fbgen.set_noise(self.params_eve.noise)
         self.params_eve.frozen_bits = fbgen.generate()
 
 
-        # Determination des bits d'info et de leurs positions
+        # Information bits with their position
         mux_bits, pos_mux_bits = all_no(self.params_bob.frozen_bits, self.params_eve.frozen_bits)
         
-        sec_K = count(mux_bits)         # nombre de bits utiles
+        sec_K = count(mux_bits)         # total data bits availabale
         if sec_K == 0:
             self.error_msg.set("No secrecy channel available.\nPlease try with another SNR value.")
             return
@@ -185,8 +187,7 @@ class App(tk.Tk):
         
 
         # -- Src_rand
-        # Permet de generer des sequences aleatoires pour
-        # les bits random
+        # Generate sequences of random bits
         src_rand = aff3ct.module.source.Source_random_fast(K, 12)
 
         # -- Splitter (gets generated only once. Will be problematic if params change.)
@@ -212,10 +213,7 @@ class App(tk.Tk):
         mux = Multiplexer(seq_pos, count(mux_bits), K)
 
         # -- decoder
-        # params.frozen_bits s'adapte a la simulation demandee
-        # S'il s'agit de Bob ou d'Eve sans confidentialite, 
-        # les bits geles de Bob sont utilises
-        # Sinon, les bits geles de Eve sont utilises
+        # Adapts to the simulation asked (Bob, Eve with her frozen bits,etc)
         
         if dec_choice == "Eve01":
             params.frozen_bits = self.params_bob.frozen_bits
@@ -271,39 +269,11 @@ class App(tk.Tk):
             self.update_bottom_plot()
 
             plt.pause(.25)
-            
-
-    """
-    def run_simulation(self):
-        # simulate QPSK symbols and calculate BER for range of SNR values
-            
-            num_bits = 10000
-            EbNodB_range = range(self.snr_slider.get(), self.snr_slider.get() + 15)
-            
-            src = self.path_file
-            dec = self.select_decoder()
-
-            ber_values = []
-            for EbNodB in EbNodB_range:
-                ber, _ = self.QPSK_BER(num_bits, EbNodB)
-                ber_values.append(ber)
-
-            # update data for plot
-            self.top_plot.plot(self.QPSK_symbol(num_bits).real,self.QPSK_symbol(num_bits).imag,'bo')
-            self.top_plot.set_xlabel('Real')
-            self.top_plot.set_ylabel('Imaginary')
-
-
-            self.bottom_plot.plot(EbNodB_range, ber_values, 'bo')
-            self.bottom_plot.set_xlabel('Eb/No (dB)')
-            self.bottom_plot.set_ylabel('BER')
-
-            # update plot
-            self.top_canvas.draw()
-            self.bottom_canvas.draw()
-    """
-
+   
     def __init__(self):
+        """Constructor.
+        Setup the different buttons for the GUI
+        """
         tk.Tk.__init__(self)
 
         self.path_file = ""
@@ -330,20 +300,16 @@ class App(tk.Tk):
 
         # Decoders radio buttons
         # Decoder can either be SC_Fast or SC_Naive
-        # Considering SC_Fast is not adapted to the
-        # current problem, this is just some weird flex
-        # and it has no effect
-        # But well, nobody can tell anyways
 
         self.decoder_label = tk.Label(self.left_frame, text="Decoder:")
         self.decoder_label.pack()
         self.decoder = tk.StringVar(self.left_frame)
         self.decoder.set('') 
-        self.sc_fast_button = tk.Radiobutton(self.left_frame, text='SC Fast', variable=self.decoder, value='sc_fast') 
-        self.sc_fast_button.pack() 
         self.sc_naive_button = tk.Radiobutton(self.left_frame, text='SC Naive', variable=self.decoder, value='sc_naive') 
         self.sc_naive_button.pack() 
-        self.other_button = tk.Radiobutton(self.left_frame, text='Other', variable=self.decoder, value='other') 
+        self.sc_fast_button = tk.Radiobutton(self.left_frame, text='SC Fast', variable=self.decoder, value='sc_fast', state=tk.DISABLED) 
+        self.sc_fast_button.pack() 
+        self.other_button = tk.Radiobutton(self.left_frame, text='Other', variable=self.decoder, value='other', state=tk.DISABLED) 
         self.other_button.pack()
         self.sc_naive_button.select()
 
@@ -358,7 +324,7 @@ class App(tk.Tk):
         self.secrecy_mode.set('') 
         self.weak_button = tk.Radiobutton(self.left_frame, text='Weak', variable=self.secrecy_mode, value='weak') 
         self.weak_button.pack() 
-        self.strong_button = tk.Radiobutton(self.left_frame, text='Strong', variable=self.secrecy_mode, value='strong') 
+        self.strong_button = tk.Radiobutton(self.left_frame, text='Strong', variable=self.secrecy_mode, value='strong', state=tk.DISABLED) 
         self.strong_button.pack() 
         self.weak_button.select()
 
@@ -402,8 +368,8 @@ class App(tk.Tk):
 
         # Simulation button test alex
 
-        self.simulation_button_alex = tk.Button(self.left_frame, text="Run simulation", command=self.run_sim_alex)
-        self.simulation_button_alex.pack(pady=5)
+        self.simulation_button = tk.Button(self.left_frame, text="Run simulation", command=self.run_sim)
+        self.simulation_button.pack(pady=5)
 
         # Clear button
         self.clear_button = tk.Button(self.left_frame, text="Clear Image", command=self.clear_img)
@@ -430,16 +396,7 @@ class App(tk.Tk):
         self.upper_frame = tk.LabelFrame(self.right_frame, text="Image received")
         self.upper_frame.pack(side="top", fill="both", expand=True)
 
-        # Scatterplot figure
-        """
-        self.scatterplot_figure = Figure(figsize=(5, 5))
-        self.scatterplot_canvas = FigureCanvasTkAgg(self.scatterplot_figure, self.upper_frame)
-        self.scatterplot_canvas.draw()
-        self.scatterplot_canvas.get_tk_widget().pack(side="top", fill="both", expand=True)
-        self.scatterplot_toolbar = NavigationToolbar2Tk(self.scatterplot_canvas, self.upper_frame)
-        self.scatterplot_toolbar.update()
-        self.scatterplot_canvas._tkcanvas.pack(side="top", fill="both", expand=True)
-        """
+        # Top figure
         self.top_figure = Figure() 
         self.top_plot = self.top_figure.add_subplot(111) 
         self.top_canvas = FigureCanvasTkAgg(self.top_figure, self.upper_frame) 
@@ -450,17 +407,7 @@ class App(tk.Tk):
         self.lower_frame = tk.LabelFrame(self.right_frame, text="BER")
         self.lower_frame.pack(side="bottom", fill="both", expand=True)
 
-        # BER curves figure
-        """
-        self.ber_curves_figure = Figure(figsize=(5, 5))
-        self.ber_curves_canvas = FigureCanvasTkAgg(self.ber_curves_figure, self.lower_frame)
-        self.ber_curves_canvas.draw()
-        self.ber_curves_canvas.get_tk_widget().pack(side="top", fill="both", expand=True)
-        self.ber_curves_toolbar = NavigationToolbar2Tk(self.ber_curves_canvas, self.lower_frame)
-        self.ber_curves_toolbar.update()
-        self.ber_curves_canvas._tkcanvas.pack(side="top", fill="both", expand=True)
-        """
-
+        # Bottom figure
         self.bottom_figure = Figure() 
         self.bottom_plot = self.bottom_figure.add_subplot(111) 
         self.bottom_canvas = FigureCanvasTkAgg(self.bottom_figure, self.lower_frame) 

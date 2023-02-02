@@ -105,11 +105,12 @@ get_frame_size()
 {
 	return this->frame_len;
 }
-
 void Splitter::
 print_info()
 {
+/*
 	std::cout << "Buffer: " << &this->buffer << "\nInput: " << &this->input << std::endl;
+*/
 }
 
 void Splitter::

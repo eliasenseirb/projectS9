@@ -17,7 +17,7 @@ import time
 import math
 import matplotlib.pyplot as plt
 from dotenv import load_dotenv
-#import cv2
+import cv2
 
 # ensure we can find aff3ct
 load_dotenv()
@@ -26,6 +26,7 @@ sys.path.append(os.getenv("AFF3CT_PATH"))
 sys.path.append(os.getenv("PYAF_PATH"))
 sys.path.append(os.getenv("THREADED_PATH"))
 sys.path.append("../src")
+sys.path.append("./src")
 
 import py_aff3ct as aff3ct
 import py_aff3ct.module.encoder as af_enc
@@ -305,16 +306,13 @@ class App(tk.Tk):
         self.decoder.set('')
 
         self.sc_naive_button = tk.Radiobutton(self.left_frame, text='SC Naive', variable=self.decoder, value='sc_naive') 
-        self.sc_fast_button  = tk.Radiobutton(self.left_frame, text='SC Fast', variable=self.decoder, value='sc_fast') 
-        self.other_button    = tk.Radiobutton(self.left_frame, text='Other', variable=self.decoder, value='other') 
+        self.sc_fast_button  = tk.Radiobutton(self.left_frame, text='SC Fast', variable=self.decoder, value='sc_fast', state=tk.DISABLED) 
+        self.other_button    = tk.Radiobutton(self.left_frame, text='Other', variable=self.decoder, value='other', state=tk.DISABLED) 
         
         self.sc_naive_button.pack() 
         self.sc_fast_button.pack () 
         self.other_button.pack   ()
-        
-        self.sc_fast_button.configure(state=tk.DISABLED)
-        self.other_button.configure(state=tk.DISABLED)
-        
+
         self.sc_naive_button.select()
 
         # Secrecy mode radio buttons
@@ -328,12 +326,11 @@ class App(tk.Tk):
         self.secrecy_mode.set('') 
         
         self.weak_button   = tk.Radiobutton(self.left_frame, text='Weak', variable=self.secrecy_mode, value='weak') 
-        self.strong_button = tk.Radiobutton(self.left_frame, text='Strong', variable=self.secrecy_mode, value='strong') 
+        self.strong_button = tk.Radiobutton(self.left_frame, text='Strong', variable=self.secrecy_mode, value='strong', state=tk.DISABLED) 
         
         self.weak_button.pack  () 
         self.strong_button.pack() 
         
-        self.strong_button.configure(state=tk.DISABLED)
         self.weak_button.select()
 
         self.inv_label6 = tk.Label(self.left_frame)
@@ -364,6 +361,7 @@ class App(tk.Tk):
         # save its path locally.
         # Then it can be loaded in the simulation
 
+        #TO BE DISABLED
         self.file_button = tk.Button(self.left_frame, text="Select image", command=self.open_file)
         self.file_text_var = tk.StringVar()
         self.file_text_var.set("No image loaded.")
@@ -400,7 +398,7 @@ class App(tk.Tk):
         self.upper_frame = tk.LabelFrame(self.right_frame, text="Image received")
         self.upper_frame.pack(side="top", fill="both", expand=True)
 
-        # Scatterplot figure
+        # Img figure (FUTURE: SCATTERPLOT & IMG)
         self.top_figure = Figure() 
         self.top_plot = self.top_figure.add_subplot(111) 
         self.top_canvas = FigureCanvasTkAgg(self.top_figure, self.upper_frame) 
@@ -411,7 +409,7 @@ class App(tk.Tk):
         self.lower_frame = tk.LabelFrame(self.right_frame, text="BER")
         self.lower_frame.pack(side="bottom", fill="both", expand=True)
 
-        # BER curves figure
+        # BER curves figure (FUTURE: Mutual information)
         self.bottom_figure = Figure() 
         self.bottom_plot = self.bottom_figure.add_subplot(111) 
         self.bottom_canvas = FigureCanvasTkAgg(self.bottom_figure, self.lower_frame) 

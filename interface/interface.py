@@ -20,6 +20,7 @@ sys.path.append(os.getenv("AFF3CT_PATH"))
 sys.path.append(os.getenv("PYAF_PATH"))
 
 sys.path.append("../src")
+sys.path.append("./src")
 
 import py_aff3ct as aff3ct
 import py_aff3ct.module.encoder as af_enc
@@ -123,7 +124,7 @@ class App(tk.Tk):
         elif decoder == 'sc_naive':
             dec = aff3ct.module.decoder.Decoder_polar_SC_naive_sys(K, N, frozen_bits)
         else:
-            # use other decoder
+            # use other decoder, to be defined
             dec = aff3ct.module.decoder.Decoder_other(K, N, frozen_bits)
         return dec
 
