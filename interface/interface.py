@@ -73,6 +73,7 @@ class App(tk.Tk):
         self.top_plot.imshow(self.img_rx, cmap='gist_gray')
         self.top_plot.set_xlabel('pixels')
         self.top_plot.set_ylabel('pixels')
+        self.top_plot.axis('off')
         self.top_canvas.draw()
         self.top_canvas.flush_events()
 
