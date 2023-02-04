@@ -4,7 +4,7 @@ class params:
 
     def __init__(self, ebn0):
         """Common parameters for Bob and Eve"""
-        #self.K = 512
+        self.K = 1900
         self.N = 2048              # Polar encoder output size
         self.R = self.K/self.N     # Rate of the code
         self.ebn0 = ebn0           # SNR
@@ -21,7 +21,7 @@ class params:
 class Bob(params):
     def __init__(self, ebn0):
         """Specific parameters for Bob"""
-        self.K=1900
+        self.frozen_K=1900
         super().__init__(ebn0)
         self.esn0 = self.ebn0 + 10*math.log10(self.K/self.N)
         self.sigma = 1/(math.sqrt(2)*10**(self.esn0/20))
@@ -30,7 +30,7 @@ class Bob(params):
 class Eve(params):
     def __init__(self, ebn0):
         """Specific parameters for Eve"""
-        self.K=1500
+        self.frozen_K=1500
         super().__init__(ebn0)
         self.ebn0 -= 3
         self.esn0 = self.ebn0 + 10*math.log10(self.K/self.N)

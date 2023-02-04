@@ -65,13 +65,13 @@ def get_secrecy_position(frozen_bits, information_bits):
 def gen_frozen(Bob, Eve):
     """Generate frozen bits for Bob and Eve"""
     # Bob's frozen bits
-    fbgen_bob = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(Bob.K,Bob.N)
+    fbgen_bob = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(Bob.frozen_K,Bob.N)
     Bob.noise = aff3ct.tools.noise.Sigma(Bob.sigma)
     fbgen_bob.set_noise(Bob.noise)
     Bob.frozen_bits = fbgen_bob.generate()
 
     # Eve's frozen bits
-    fbgen_eve = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(Eve.K,Eve.N)
+    fbgen_eve = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(Eve.frozen_K,Eve.N)
     Eve.noise = aff3ct.tools.noise.Sigma(Eve.sigma)
     fbgen_eve.set_noise(Eve.noise)
     Eve.frozen_bits = fbgen_eve.generate()
