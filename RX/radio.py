@@ -3,6 +3,11 @@
 Setup the radio
 
 """
+import sys
+import os
+
+sys.path.append("../dvbs2_factory")
+sys.path.append("./dvbs2_factory")
 
 from dvbs2_factory import dvbs2_factory
 import py_aff3ct

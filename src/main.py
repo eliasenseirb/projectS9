@@ -30,7 +30,7 @@ sys.path.append("../"+os.getenv("AFF3CT_PATH"))
 import py_aff3ct as aff3ct
 import py_aff3ct.module.encoder as af_enc
 
-from ..interface.params import Bob, Eve
+from params import Bob, Eve
 
 
 
@@ -57,11 +57,10 @@ def display_frozen_bits(frozen_bits):
 
 
 # Parameters
-"""
 K = 512
 N = 1024
 ebn0_min = 0
-ebn0_max = 80
+ebn0_max = 4
 ebn0_step = 0.25
 
 ebn0 = np.arange(ebn0_min,ebn0_max,ebn0_step)
@@ -70,12 +69,10 @@ sigma_vals_w = 1/(math.sqrt(2) * 10 ** (esn0_w / 20))
 esn0 = ebn0 + 10 * math.log10(K/N)
 sigma_vals = 1/(math.sqrt(2) * 10 ** (esn0 / 20))
 """
-
 ebn0 = 12
 bob = Bob(ebn0)
 eve = Eve(ebn0)
-
-breakpoint()
+"""
 
 fbgen = aff3ct.tools.frozenbits_generator.Frozenbits_generator_GA_Arikan(K,N)
 noise = aff3ct.tools.noise.Sigma(sigma_vals[0])
@@ -133,8 +130,7 @@ mdm2["demodulate   ::CP  "].bind(          sigma_wiretap  )
 
 seq  = aff3ct.tools.sequence.Sequence(src("generate"), mnt("check_errors"), 1)
 
-seq.export_dot("BFER_polar.dot")
-breakpoint()
+#seq.export_dot("BFER_polar.dot")
 
 
 fer   = np.zeros(len(ebn0))

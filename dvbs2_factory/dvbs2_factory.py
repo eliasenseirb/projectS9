@@ -5,19 +5,19 @@ sys.path.insert(0, pyaf_path) # pyaf location
 py_aff3ct_path = os.path.abspath(os.path.dirname(__file__ ) + '/../../py_aff3ct/build/lib')
 sys.path.insert(0, py_aff3ct_path) # py_aff3ct location
 
-from .bb_scrambler_factory import bb_scrambler_factory
-from .bch_codec_factory import bch_codec_factory
-from .frame_synchronization_factory import frame_synchronization_factory
-from .framer_factory import framer_factory
-from .frequency_synchronization_factory import frequency_synchronization_factory
-from .ldpc_codec_factory import ldpc_codec_factory
-from .modem_factory import modem_factory
-from .pl_scrambler_factory import pl_scrambler_factory
-from .shaping_factory import shaping_factory
-from .snr_estimator_factory import snr_estimator_factory
-from .source_factory import source_factory
-from .symbol_agc_factory import symbol_agc_factory
-from .timing_synchronization_factory import timing_synchronization_factory
+from bb_scrambler_factory import bb_scrambler_factory
+from bch_codec_factory import bch_codec_factory
+from frame_synchronization_factory import frame_synchronization_factory
+from framer_factory import framer_factory
+from frequency_synchronization_factory import frequency_synchronization_factory
+from ldpc_codec_factory import ldpc_codec_factory
+from modem_factory import modem_factory
+from pl_scrambler_factory import pl_scrambler_factory
+from shaping_factory import shaping_factory
+from snr_estimator_factory import snr_estimator_factory
+from source_factory import source_factory
+from symbol_agc_factory import symbol_agc_factory
+from timing_synchronization_factory import timing_synchronization_factory
 
 import math
 

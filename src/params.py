@@ -1,10 +1,11 @@
 import math
-from myutils import all_no, no, count
+from frozenbits_handler import all_no, no, count
 
 class params:
 
     def __init__(self, ebn0):
-        #self.K = 900
+        """Common parameters for Bob and Eve"""
+        self.K = 900
         self.N = 1024
         self.R = self.K/self.N
         self.ebn0 = ebn0
@@ -16,6 +17,7 @@ class params:
 
 class Bob(params):
     def __init__(self, ebn0):
+        """Specific parameters for Bob"""
         self.K = 900
         super().__init__(ebn0)
         self.esn0 = self.ebn0 + 10*math.log10(self.K/self.N)
@@ -24,6 +26,7 @@ class Bob(params):
 
 class Eve(params):
     def __init__(self, ebn0, has_mux=False):
+        """Specific parameters for Eve"""
         self.K = 500
         super().__init__(ebn0)
         self.ebn0 -= 3
